@@ -150,6 +150,14 @@ select:focus,input:focus{outline:none;border-color:var(--keyword)}
           <input type="number" id="ench-pct" value="21" min="0" step="0.1" style="width:100%" onchange="setEnchPct(this.value)">
         </div>
         <div>
+          <div class="cfg-lbl">인첸트 대상</div>
+          <div class="btn-grp" id="ench-tgt-grp">
+            <button class="active" onclick="setEnchTarget('auto')">자동탐색</button>
+            <button onclick="setEnchTarget('hp')">체력 고정</button>
+            <button onclick="setEnchTarget('def')">방어 고정</button>
+          </div>
+        </div>
+        <div>
           <div class="cfg-lbl">젬 레벨</div>
           <div class="btn-grp" id="gem-grp">
             <button class="active" onclick="setGemLv(36)">36</button>
@@ -309,7 +317,7 @@ const ACC_DB=[
 // ================================================================
 // 상태
 // ================================================================
-let simGrade='9.0', simAccCat='회깃', simPendOpts=2, simGemLv=36, simEnchPct=21;
+let simGrade='9.0', simAccCat='회깃', simPendOpts=2, simGemLv=36, simEnchPct=21, simEnchTarget='auto';
 let buf={hp:0,atk:0,def:0};
 const SAVE_KEY='dv1_tank_calc_spirit';
 let S={
@@ -343,6 +351,15 @@ function setAccCat(cat){
   simAccCat=cat;
   document.querySelectorAll('#acc-grp button').forEach(b=>b.classList.toggle('active',b.textContent.startsWith(cat==='회깃'?'회깃':cat==='어둠뿔'?'어둠뿔':'스텟')));
   document.getElementById('acc-sec').style.display=cat==='스텟장신구'?'':'none';
+}
+function setEnchTarget(t){
+  simEnchTarget=t;
+  document.querySelectorAll('#ench-tgt-grp button').forEach((b,i)=>b.classList.toggle('active',['auto','hp','def'][i]===t));
+}
+function getEnchList(){
+  if(simEnchTarget==='hp')return['hp'];
+  if(simEnchTarget==='def')return['def'];
+  return['hp','atk','def'];
 }
 function setEnchPct(val){
   simEnchPct=Math.max(0,parseFloat(val)||0);
@@ -607,7 +624,7 @@ function buildAccCandidates(){
       {label:'방5%',stat:'def'},
     ];
     baseVariants.forEach(bvv=>{
-      ['hp','atk','def'].forEach(enc=>{
+      getEnchList().forEach(enc=>{
         list.push({
           name:`어둠뿔 (자체:${bvv.label})`,
           hp:(bvv.stat==='hp'?0.05:0)+(enc==='hp'?simEnchPct/100:0),
@@ -619,7 +636,7 @@ function buildAccCandidates(){
     });
   }else if(simAccCat==='회깃'){
     // 자체 스탯 없음(회피만 올려줌) + 인첸트(+21%)만 계산
-    ['hp','atk','def'].forEach(enc=>{
+    getEnchList().forEach(enc=>{
       list.push({
         name:'회깃14',
         hp:enc==='hp'?simEnchPct/100:0, atk:enc==='atk'?simEnchPct/100:0, def:enc==='def'?simEnchPct/100:0,
@@ -634,7 +651,7 @@ function buildAccCandidates(){
       return[];
     }
     owned.forEach(a=>{
-      const encs=a.card.enchant==='none'?['hp','atk','def']:[a.card.enchant];
+      const encs=a.card.enchant==='none'?getEnchList():[a.card.enchant];
       encs.forEach(enc=>{
         list.push({
           name:a.n,

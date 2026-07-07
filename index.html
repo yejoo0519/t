@@ -91,18 +91,42 @@ select:focus,input:focus{outline:none;border-color:var(--keyword)}
 }
 @keyframes blink{50%{opacity:0}}
 .res-wrap{overflow-x:auto}
-.rtbl{width:100%;border-collapse:collapse;font-size:13px}
-.rtbl th{background:var(--sf2);padding:8px 11px;text-align:left;font-size:11px;color:var(--dim);border-bottom:1px solid var(--bd);white-space:nowrap;font-weight:700}
-.rtbl td{padding:9px 11px;border-bottom:1px solid var(--bd);vertical-align:middle;color:var(--text)}
-.rtbl tr:last-child td{border-bottom:none}
-.rtbl tbody tr:hover td{background:rgba(255,255,255,.02)}
-.rtbl tbody tr.rank1 td{background:rgba(220,220,170,.06)}
-.rtbl tbody tr.rank1 td:first-child{box-shadow:inset 3px 0 0 var(--gold)}
-.rk{color:var(--dimmer)}
+.type-block{background:var(--sf);border:1px solid var(--bd);border-radius:4px;margin-bottom:10px;overflow:hidden}
+.type-hd{width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--sf2);border:none;color:var(--text);cursor:pointer;font-family:'Nanum Gothic Coding',monospace;font-size:13px;text-align:left}
+.type-hd:hover{background:rgba(255,255,255,.03)}
+.ty-caret{color:var(--keyword);font-size:11px;transition:transform .15s;flex-shrink:0}
+.ty-caret.open{transform:rotate(90deg)}
+.ty-name{color:var(--string);font-weight:700;flex-shrink:0}
+.ty-name::before,.ty-name::after{content:'"';opacity:.6}
+.ty-summary{color:var(--text2);font-size:12px;margin-left:auto;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ty-bv{color:var(--num);font-weight:700;flex-shrink:0}
+.ty-body{display:none;padding:10px}
+.ty-body.open{display:block}
+.res-card{background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:10px 12px;margin-bottom:8px}
+.res-card:last-child{margin-bottom:0}
+.res-card.rank1{border-color:var(--gold);background:rgba(220,220,170,.05)}
+.res-card-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.res-thumb{width:26px;height:26px;object-fit:contain;border:1px solid var(--bd);border-radius:3px;background:var(--sf2);flex-shrink:0}
+.res-thumb-sm{width:16px;height:16px;object-fit:contain;border:1px solid var(--bd);border-radius:2px;background:var(--sf2);vertical-align:-3px;margin-right:3px}
+.res-name{color:var(--string);font-weight:700;font-size:13px}
+.res-name::before,.res-name::after{content:'"';opacity:.6}
+.res-ench{color:var(--dim);font-size:11px;margin-left:auto}
+.res-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.res-cell{min-width:0}
+.res-cell label{display:block;font-size:10px;color:var(--dim);margin-bottom:2px}
+.res-cell .v{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res-cell.bv .v{color:var(--num);font-weight:700}
+.res-cell.wide{grid-column:span 2}
+.rk{color:var(--dimmer);font-size:12px}
 .rk.rk1{color:var(--gold);font-weight:700}
 .str{color:var(--string)}
 .str::before,.str::after{content:'"';opacity:.6}
-.bv-cell{font-weight:700;color:var(--num)}
+@media (max-width:600px){
+  .type-hd{flex-wrap:wrap}
+  .ty-summary{flex-basis:100%;margin-left:20px}
+  .res-grid{grid-template-columns:repeat(2,1fr)}
+  .res-cell.wide{grid-column:span 1}
+}
 .info-box{font-size:13px;line-height:2;color:var(--text2)}
 .info-box::before{content:none}
 </style>
@@ -239,79 +263,93 @@ const SP_PRESETS=[
   {id:'first_only_plus',name:'1플',types:['+','%','%','%']}
 ];
 
-// 장신구 DB (기존 계산기의 ACC_DB, 이미지 제외)
+// 장신구/펜던트 이미지 (기존 계산기와 동일한 저장소)
+const TEM_BASE='https://raw.githubusercontent.com/yejoo0519/dogam/refs/heads/main/tem';
+const ACC_IMG_MAP={
+  '20':{'빛뿔':12,'바뿔':13,'악보':20,'황보':21,'여보':22,'대뿔':1433,'물뿔':1435,'불뿔':1437},
+  '19':{'악보':1273,'황보':1274,'여보':1275,'바뿔':1276,'대뿔':1306,'물뿔':1308,'불뿔':1310},
+  '18':{'빛뿔':1209,'악보':1205,'황보':1206,'여보':1207,'바뿔':1202,'대뿔':1247,'물뿔':1249,'불뿔':1251},
+  '17':{'악보':1102,'황보':1103,'여보':1104,'바뿔':1105,'대뿔':1130,'물뿔':1132,'불뿔':1134},
+  '16':{'악보':1046,'황보':1047,'여보':1048,'바뿔':1049,'대뿔':1130,'물뿔':1132,'불뿔':1134},
+};
+const accImg=(lv,name)=>{const n=ACC_IMG_MAP[String(lv)]?.[name];return n?`${TEM_BASE}/${n}.png`:'';};
+const IMG_PEND={태양:`${TEM_BASE}/1337.png`,달:`${TEM_BASE}/1336.png`,별:`${TEM_BASE}/1335.png`};
+const IMG_어둠뿔=`${TEM_BASE}/760.png`;
+const IMG_회깃=`${TEM_BASE}/645.png`;
+
+// 장신구 DB (기존 계산기의 ACC_DB)
 const ACC_DB=[
-  {n:'빛뿔 (크/체) 18',hp:0.08, atk:0,    def:0   },
-  {n:'빛뿔 (크/공) 18',hp:0,    atk:0.08, def:0   },
-  {n:'빛뿔 (크/방) 18',hp:0,    atk:0,    def:0.08},
-  {n:'빛뿔 (크/체) 20',hp:0.1,  atk:0,    def:0   },
-  {n:'빛뿔 (크/공) 20',hp:0,    atk:0.1,  def:0   },
-  {n:'빛뿔 (크/방) 20',hp:0,    atk:0,    def:0.1 },
+  {n:'빛뿔 (크/체) 18',hp:0.08, atk:0,    def:0   , img:accImg(18,'빛뿔')},
+  {n:'빛뿔 (크/공) 18',hp:0,    atk:0.08, def:0   , img:accImg(18,'빛뿔')},
+  {n:'빛뿔 (크/방) 18',hp:0,    atk:0,    def:0.08, img:accImg(18,'빛뿔')},
+  {n:'빛뿔 (크/체) 20',hp:0.1,  atk:0,    def:0   , img:accImg(20,'빛뿔')},
+  {n:'빛뿔 (크/공) 20',hp:0,    atk:0.1,  def:0   , img:accImg(20,'빛뿔')},
+  {n:'빛뿔 (크/방) 20',hp:0,    atk:0,    def:0.1 , img:accImg(20,'빛뿔')},
 
-  {n:'악몽 수호자의 보주 (악보) 16',hp:0.16, atk:0,    def:0   },
-  {n:'황혼 수호자의 보주 (황보) 16',hp:0,    atk:0.16, def:0   },
-  {n:'여명 수호자의 보주 (여보) 16',hp:0,    atk:0,    def:0.16},
-  {n:'물뿔 (체/공) 16',hp:0.1,  atk:0.06, def:0   },
-  {n:'물뿔 (체/방) 16',hp:0.1,  atk:0,    def:0.06},
-  {n:'불뿔 (공/체) 16',hp:0.06, atk:0.1,  def:0   },
-  {n:'불뿔 (공/방) 16',hp:0,    atk:0.1,  def:0.06},
-  {n:'대뿔 (방/체) 16',hp:0.06, atk:0,    def:0.1 },
-  {n:'대뿔 (방/공) 16',hp:0,    atk:0.06, def:0.1 },
-  {n:'바뿔 (체/방) 16',hp:0.08, atk:0,    def:0.08},
-  {n:'바뿔 (공/체) 16',hp:0.08, atk:0.08, def:0   },
-  {n:'바뿔 (공/방) 16',hp:0,    atk:0.08, def:0.08},
+  {n:'악몽 수호자의 보주 (악보) 16',hp:0.16, atk:0,    def:0   , img:accImg(16,'악보')},
+  {n:'황혼 수호자의 보주 (황보) 16',hp:0,    atk:0.16, def:0   , img:accImg(16,'황보')},
+  {n:'여명 수호자의 보주 (여보) 16',hp:0,    atk:0,    def:0.16, img:accImg(16,'여보')},
+  {n:'물뿔 (체/공) 16',hp:0.1,  atk:0.06, def:0   , img:accImg(16,'물뿔')},
+  {n:'물뿔 (체/방) 16',hp:0.1,  atk:0,    def:0.06, img:accImg(16,'물뿔')},
+  {n:'불뿔 (공/체) 16',hp:0.06, atk:0.1,  def:0   , img:accImg(16,'불뿔')},
+  {n:'불뿔 (공/방) 16',hp:0,    atk:0.1,  def:0.06, img:accImg(16,'불뿔')},
+  {n:'대뿔 (방/체) 16',hp:0.06, atk:0,    def:0.1 , img:accImg(16,'대뿔')},
+  {n:'대뿔 (방/공) 16',hp:0,    atk:0.06, def:0.1 , img:accImg(16,'대뿔')},
+  {n:'바뿔 (체/방) 16',hp:0.08, atk:0,    def:0.08, img:accImg(16,'바뿔')},
+  {n:'바뿔 (공/체) 16',hp:0.08, atk:0.08, def:0   , img:accImg(16,'바뿔')},
+  {n:'바뿔 (공/방) 16',hp:0,    atk:0.08, def:0.08, img:accImg(16,'바뿔')},
 
-  {n:'악몽 수호자의 보주 (악보) 17',hp:0.17, atk:0,    def:0   },
-  {n:'황혼 수호자의 보주 (황보) 17',hp:0,    atk:0.17, def:0   },
-  {n:'여명 수호자의 보주 (여보) 17',hp:0,    atk:0,    def:0.17},
-  {n:'물뿔 (체/공) 17',hp:0.11, atk:0.06, def:0   },
-  {n:'물뿔 (체/방) 17',hp:0.11, atk:0,    def:0.06},
-  {n:'불뿔 (공/체) 17',hp:0.06, atk:0.11, def:0   },
-  {n:'불뿔 (공/방) 17',hp:0,    atk:0.11, def:0.06},
-  {n:'대뿔 (방/체) 17',hp:0.06, atk:0,    def:0.11},
-  {n:'대뿔 (방/공) 17',hp:0,    atk:0.06, def:0.11},
-  {n:'바뿔 (체/방) 17',hp:0.09, atk:0,    def:0.08},
-  {n:'바뿔 (공/체) 17',hp:0.08, atk:0.09, def:0   },
-  {n:'바뿔 (공/방) 17',hp:0,    atk:0.09, def:0.08},
+  {n:'악몽 수호자의 보주 (악보) 17',hp:0.17, atk:0,    def:0   , img:accImg(17,'악보')},
+  {n:'황혼 수호자의 보주 (황보) 17',hp:0,    atk:0.17, def:0   , img:accImg(17,'황보')},
+  {n:'여명 수호자의 보주 (여보) 17',hp:0,    atk:0,    def:0.17, img:accImg(17,'여보')},
+  {n:'물뿔 (체/공) 17',hp:0.11, atk:0.06, def:0   , img:accImg(17,'물뿔')},
+  {n:'물뿔 (체/방) 17',hp:0.11, atk:0,    def:0.06, img:accImg(17,'물뿔')},
+  {n:'불뿔 (공/체) 17',hp:0.06, atk:0.11, def:0   , img:accImg(17,'불뿔')},
+  {n:'불뿔 (공/방) 17',hp:0,    atk:0.11, def:0.06, img:accImg(17,'불뿔')},
+  {n:'대뿔 (방/체) 17',hp:0.06, atk:0,    def:0.11, img:accImg(17,'대뿔')},
+  {n:'대뿔 (방/공) 17',hp:0,    atk:0.06, def:0.11, img:accImg(17,'대뿔')},
+  {n:'바뿔 (체/방) 17',hp:0.09, atk:0,    def:0.08, img:accImg(17,'바뿔')},
+  {n:'바뿔 (공/체) 17',hp:0.08, atk:0.09, def:0   , img:accImg(17,'바뿔')},
+  {n:'바뿔 (공/방) 17',hp:0,    atk:0.09, def:0.08, img:accImg(17,'바뿔')},
 
-  {n:'악몽 수호자의 보주 (악보) 18',hp:0.18, atk:0,    def:0   },
-  {n:'황혼 수호자의 보주 (황보) 18',hp:0,    atk:0.18, def:0   },
-  {n:'여명 수호자의 보주 (여보) 18',hp:0,    atk:0,    def:0.18},
-  {n:'물뿔 (체/공) 18',hp:0.12, atk:0.06, def:0   },
-  {n:'물뿔 (체/방) 18',hp:0.12, atk:0,    def:0.06},
-  {n:'불뿔 (공/체) 18',hp:0.06, atk:0.12, def:0   },
-  {n:'불뿔 (공/방) 18',hp:0,    atk:0.12, def:0.06},
-  {n:'대뿔 (방/체) 18',hp:0.06, atk:0,    def:0.12},
-  {n:'대뿔 (방/공) 18',hp:0,    atk:0.06, def:0.12},
-  {n:'바뿔 (체/방) 18',hp:0.09, atk:0,    def:0.09},
-  {n:'바뿔 (공/체) 18',hp:0.09, atk:0.09, def:0   },
-  {n:'바뿔 (공/방) 18',hp:0,    atk:0.09, def:0.09},
+  {n:'악몽 수호자의 보주 (악보) 18',hp:0.18, atk:0,    def:0   , img:accImg(18,'악보')},
+  {n:'황혼 수호자의 보주 (황보) 18',hp:0,    atk:0.18, def:0   , img:accImg(18,'황보')},
+  {n:'여명 수호자의 보주 (여보) 18',hp:0,    atk:0,    def:0.18, img:accImg(18,'여보')},
+  {n:'물뿔 (체/공) 18',hp:0.12, atk:0.06, def:0   , img:accImg(18,'물뿔')},
+  {n:'물뿔 (체/방) 18',hp:0.12, atk:0,    def:0.06, img:accImg(18,'물뿔')},
+  {n:'불뿔 (공/체) 18',hp:0.06, atk:0.12, def:0   , img:accImg(18,'불뿔')},
+  {n:'불뿔 (공/방) 18',hp:0,    atk:0.12, def:0.06, img:accImg(18,'불뿔')},
+  {n:'대뿔 (방/체) 18',hp:0.06, atk:0,    def:0.12, img:accImg(18,'대뿔')},
+  {n:'대뿔 (방/공) 18',hp:0,    atk:0.06, def:0.12, img:accImg(18,'대뿔')},
+  {n:'바뿔 (체/방) 18',hp:0.09, atk:0,    def:0.09, img:accImg(18,'바뿔')},
+  {n:'바뿔 (공/체) 18',hp:0.09, atk:0.09, def:0   , img:accImg(18,'바뿔')},
+  {n:'바뿔 (공/방) 18',hp:0,    atk:0.09, def:0.09, img:accImg(18,'바뿔')},
 
-  {n:'악몽 수호자의 보주 (악보) 19',hp:0.19, atk:0,    def:0   },
-  {n:'황혼 수호자의 보주 (황보) 19',hp:0,    atk:0.19, def:0   },
-  {n:'여명 수호자의 보주 (여보) 19',hp:0,    atk:0,    def:0.19},
-  {n:'물뿔 (체/공) 19',hp:0.13, atk:0.06, def:0   },
-  {n:'물뿔 (체/방) 19',hp:0.13, atk:0,    def:0.06},
-  {n:'불뿔 (공/체) 19',hp:0.06, atk:0.13, def:0   },
-  {n:'불뿔 (공/방) 19',hp:0,    atk:0.13, def:0.06},
-  {n:'대뿔 (방/체) 19',hp:0.06, atk:0,    def:0.13},
-  {n:'대뿔 (방/공) 19',hp:0,    atk:0.06, def:0.13},
-  {n:'바뿔 (체/방) 19',hp:0.1,  atk:0,    def:0.09},
-  {n:'바뿔 (공/체) 19',hp:0.09, atk:0.1,  def:0   },
-  {n:'바뿔 (공/방) 19',hp:0,    atk:0.1,  def:0.09},
+  {n:'악몽 수호자의 보주 (악보) 19',hp:0.19, atk:0,    def:0   , img:accImg(19,'악보')},
+  {n:'황혼 수호자의 보주 (황보) 19',hp:0,    atk:0.19, def:0   , img:accImg(19,'황보')},
+  {n:'여명 수호자의 보주 (여보) 19',hp:0,    atk:0,    def:0.19, img:accImg(19,'여보')},
+  {n:'물뿔 (체/공) 19',hp:0.13, atk:0.06, def:0   , img:accImg(19,'물뿔')},
+  {n:'물뿔 (체/방) 19',hp:0.13, atk:0,    def:0.06, img:accImg(19,'물뿔')},
+  {n:'불뿔 (공/체) 19',hp:0.06, atk:0.13, def:0   , img:accImg(19,'불뿔')},
+  {n:'불뿔 (공/방) 19',hp:0,    atk:0.13, def:0.06, img:accImg(19,'불뿔')},
+  {n:'대뿔 (방/체) 19',hp:0.06, atk:0,    def:0.13, img:accImg(19,'대뿔')},
+  {n:'대뿔 (방/공) 19',hp:0,    atk:0.06, def:0.13, img:accImg(19,'대뿔')},
+  {n:'바뿔 (체/방) 19',hp:0.1,  atk:0,    def:0.09, img:accImg(19,'바뿔')},
+  {n:'바뿔 (공/체) 19',hp:0.09, atk:0.1,  def:0   , img:accImg(19,'바뿔')},
+  {n:'바뿔 (공/방) 19',hp:0,    atk:0.1,  def:0.09, img:accImg(19,'바뿔')},
 
-  {n:'악몽 수호자의 보주 (악보) 20',hp:0.2,  atk:0,    def:0   },
-  {n:'황혼 수호자의 보주 (황보) 20',hp:0,    atk:0.2,  def:0   },
-  {n:'여명 수호자의 보주 (여보) 20',hp:0,    atk:0,    def:0.2 },
-  {n:'물뿔 (체/공) 20',hp:0.14, atk:0.06, def:0   },
-  {n:'물뿔 (체/방) 20',hp:0.14, atk:0,    def:0.06},
-  {n:'불뿔 (공/체) 20',hp:0.06, atk:0.14, def:0   },
-  {n:'불뿔 (공/방) 20',hp:0,    atk:0.14, def:0.06},
-  {n:'대뿔 (방/체) 20',hp:0.06, atk:0,    def:0.14},
-  {n:'대뿔 (방/공) 20',hp:0,    atk:0.06, def:0.14},
-  {n:'바뿔 (체/방) 20',hp:0.1,  atk:0,    def:0.1 },
-  {n:'바뿔 (공/체) 20',hp:0.1,  atk:0.1,  def:0   },
-  {n:'바뿔 (공/방) 20',hp:0,    atk:0.1,  def:0.1 },
+  {n:'악몽 수호자의 보주 (악보) 20',hp:0.2,  atk:0,    def:0   , img:accImg(20,'악보')},
+  {n:'황혼 수호자의 보주 (황보) 20',hp:0,    atk:0.2,  def:0   , img:accImg(20,'황보')},
+  {n:'여명 수호자의 보주 (여보) 20',hp:0,    atk:0,    def:0.2 , img:accImg(20,'여보')},
+  {n:'물뿔 (체/공) 20',hp:0.14, atk:0.06, def:0   , img:accImg(20,'물뿔')},
+  {n:'물뿔 (체/방) 20',hp:0.14, atk:0,    def:0.06, img:accImg(20,'물뿔')},
+  {n:'불뿔 (공/체) 20',hp:0.06, atk:0.14, def:0   , img:accImg(20,'불뿔')},
+  {n:'불뿔 (공/방) 20',hp:0,    atk:0.14, def:0.06, img:accImg(20,'불뿔')},
+  {n:'대뿔 (방/체) 20',hp:0.06, atk:0,    def:0.14, img:accImg(20,'대뿔')},
+  {n:'대뿔 (방/공) 20',hp:0,    atk:0.06, def:0.14, img:accImg(20,'대뿔')},
+  {n:'바뿔 (체/방) 20',hp:0.1,  atk:0,    def:0.1 , img:accImg(20,'바뿔')},
+  {n:'바뿔 (공/체) 20',hp:0.1,  atk:0.1,  def:0   , img:accImg(20,'바뿔')},
+  {n:'바뿔 (공/방) 20',hp:0,    atk:0.1,  def:0.1 , img:accImg(20,'바뿔')},
 ];
 
 // ================================================================
@@ -489,8 +527,10 @@ function renderAcc(){
   S.accCards.forEach((card,ci)=>{
     const a=ACC_DB.find(x=>x.n===card.name);
     const stHtml=a?fmtAccSt(a):'<span style="color:var(--dimmer)">-</span>';
+    const imgHtml=a&&a.img?`<img src="${a.img}" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;border:1px solid var(--bd);border-radius:3px;background:var(--bg)">`:'<div style="width:32px;height:32px;flex-shrink:0;border:1px solid var(--bd);border-radius:3px;background:var(--bg)"></div>';
     html+=`<div class="acc-card">
       <div class="acc-card-row">
+        ${imgHtml}
         <div class="acc-search-wrap" id="acc-wrap-${ci}">
           <input class="acc-search-input" id="acc-inp-${ci}" value="${card.name||''}" placeholder="장신구 검색..."
             oninput="filterAccDrop(${ci},this.value)"
@@ -630,7 +670,8 @@ function buildAccCandidates(){
           hp:(bvv.stat==='hp'?0.05:0)+(enc==='hp'?simEnchPct/100:0),
           atk:(enc==='atk'?simEnchPct/100:0),
           def:(bvv.stat==='def'?0.05:0)+(enc==='def'?simEnchPct/100:0),
-          ench:enc
+          ench:enc,
+          img:IMG_어둠뿔
         });
       });
     });
@@ -640,7 +681,8 @@ function buildAccCandidates(){
       list.push({
         name:'회깃14',
         hp:enc==='hp'?simEnchPct/100:0, atk:enc==='atk'?simEnchPct/100:0, def:enc==='def'?simEnchPct/100:0,
-        ench:enc
+        ench:enc,
+        img:IMG_회깃
       });
     });
   }else{
@@ -695,7 +737,7 @@ function runCalc(){
     const bufA=Math.floor(ba*buf.atk/100);
     const bufD=Math.floor(bd*buf.def/100);
 
-    let best=null;
+    const all=[];
     for(const acc of accList){
       for(const gs of gemSplits){
         const g=GEM[simGemLv];
@@ -706,39 +748,70 @@ function runCalc(){
           const fD=calcStat(bd,gD,6,acc.def,sPct.def,pend.pD,sP.def,sB.def,coll.def,bufD);
           const bv=fH*fD;
           const ebv=fH+fD*4;
-          if(!best||bv>best.bv)best={acc,gs,pend,fH,fA,fD,bv,ebv};
+          all.push({acc,gs,pend,fH,fA,fD,bv,ebv});
         }
       }
     }
-    typeResults.push({dt,...best});
+    all.sort((a,b)=>b.bv-a.bv);
+    typeResults.push({dt,top5:all.slice(0,5)});
   }
-  typeResults.sort((a,b)=>b.bv-a.bv);
+  typeResults.sort((a,b)=>b.top5[0].bv-a.top5[0].bv);
   renderResult(typeResults);
 }
 
-function renderResult(rows){
+function accImgByName(acc){
+  if(acc.img)return acc.img;
+  const a=ACC_DB.find(x=>x.n===acc.name);
+  return a&&a.img?a.img:'';
+}
+function pendImg(){
+  return simPendOpts===1?IMG_PEND.별:IMG_PEND.달;
+}
+function imgTag(src,cls){
+  cls=cls||'res-thumb';
+  return src?`<img src="${src}" class="${cls}" onerror="this.style.visibility='hidden'">`:'';
+}
+function renderResult(typeResults){
   const el=document.getElementById('res-body');
-  let html=`<table class="rtbl"><thead><tr>
-    <th>#</th><th>타입</th><th>장신구</th><th>인첸트</th><th>젬(체/방)</th><th>펜던트</th><th>체 / 공 / 방</th><th>체×방</th><th>체+방×4</th>
-  </tr></thead><tbody>`;
-  rows.forEach((r,i)=>{
-    const rank=i===0?'<span class="rk rk1">#1</span>':`<span class="rk">#${i+1}</span>`;
-    html+=`<tr class="${i===0?'rank1':''}">
-      <td>${rank}</td>
-      <td class="str">${r.dt}</td>
-      <td class="str">${r.acc.name}</td>
-      <td>${SK[r.acc.ench]}</td>
-      <td>${r.gs.nHp} / ${r.gs.nDef}</td>
-      <td class="str">${r.pend.label}</td>
-      <td><span style="color:var(--hpc)">${r.fH.toLocaleString('ko-KR')}</span> / <span style="color:var(--atc)">${r.fA.toLocaleString('ko-KR')}</span> / <span style="color:var(--dfc)">${r.fD.toLocaleString('ko-KR')}</span></td>
-      <td class="bv-cell">${r.bv.toLocaleString('ko-KR')}</td>
-      <td class="bv-cell">${r.ebv.toLocaleString('ko-KR')}</td>
-    </tr>`;
+  let html='';
+  typeResults.forEach(({dt,top5})=>{
+    const top=top5[0];
+    html+=`<div class="type-block">
+      <button class="type-hd" onclick="toggleType(this)">
+        <span class="ty-caret">▶</span>
+        <span class="ty-name">${dt}</span>
+        <span class="ty-summary">${imgTag(accImgByName(top.acc),'res-thumb-sm')}${top.acc.name} · 체${top.fH.toLocaleString('ko-KR')} / 방${top.fD.toLocaleString('ko-KR')} · 비밸 <span class="ty-bv">${top.bv.toLocaleString('ko-KR')}</span></span>
+      </button>
+      <div class="ty-body">`;
+    top5.forEach((r,i)=>{
+      const rank=i===0?'<span class="rk rk1">#1</span>':`<span class="rk">#${i+1}</span>`;
+      html+=`<div class="res-card ${i===0?'rank1':''}">
+        <div class="res-card-hd">
+          ${rank}
+          ${imgTag(accImgByName(r.acc))}
+          <span class="res-name">${r.acc.name}</span>
+          <span class="res-ench">인첸트:${SK[r.acc.ench]}</span>
+        </div>
+        <div class="res-grid">
+          <div class="res-cell"><label>젬(체/방)</label><span class="v">${r.gs.nHp} / ${r.gs.nDef}</span></div>
+          <div class="res-cell"><label>펜던트</label><span class="v str">${imgTag(pendImg(),'res-thumb-sm')}${r.pend.label}</span></div>
+          <div class="res-cell wide"><label>체 / 공 / 방</label><span class="v"><span style="color:var(--hpc)">${r.fH.toLocaleString('ko-KR')}</span> / <span style="color:var(--atc)">${r.fA.toLocaleString('ko-KR')}</span> / <span style="color:var(--dfc)">${r.fD.toLocaleString('ko-KR')}</span></span></div>
+          <div class="res-cell bv"><label>체×방</label><span class="v">${r.bv.toLocaleString('ko-KR')}</span></div>
+          <div class="res-cell bv"><label>체+방×4</label><span class="v">${r.ebv.toLocaleString('ko-KR')}</span></div>
+        </div>
+      </div>`;
+    });
+    html+='</div></div>';
   });
-  html+='</tbody></table>';
   el.innerHTML=html;
   document.getElementById('res-sec').style.display='';
   document.getElementById('res-sec').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function toggleType(btn){
+  const body=btn.nextElementSibling;
+  const caret=btn.querySelector('.ty-caret');
+  const open=body.classList.toggle('open');
+  caret.classList.toggle('open',open);
 }
 
 // ================================================================

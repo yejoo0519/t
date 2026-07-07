@@ -3,78 +3,112 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>체+방 전용 계산기 (개인용)</title>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<title>tank_calc.js — 체+방 계산기</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#1a1a2e;--sf:#1e1e30;--sf2:#252538;--bd:#333;
-  --text:#eee;--text2:#aaa;
-  --gold:#e8b84b;--gold2:#f0c968;
-  --dim:#888;--dimmer:#666;
-  --red:#f87171;--green:#4ade80;--blue:#60a5fa;
-  --hpc:#fbbf24;--atc:#f87171;--dfc:#60a5fa;
+  --bg:#1e1e1e;--sf:#252526;--sf2:#2d2d30;--bd:#3c3c3c;
+  --text:#d4d4d4;--text2:#9aa0a6;
+  --gold:#dcdcaa;--gold2:#e8d18a;      /* 함수명 계열 (강조/타이틀) */
+  --dim:#6a9955;--dimmer:#5a5a5a;      /* 주석 계열 (보조 라벨) */
+  --red:#f14c4c;--green:#b5cea8;--blue:#569cd6;
+  --hpc:#b5cea8;--atc:#ce9178;--dfc:#9cdcfe; /* number / string / variable 색상 */
+  --string:#ce9178;--keyword:#569cd6;--num:#b5cea8;
 }
-body{font-family:'Nanum Gothic',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
-.hd{display:flex;align-items:center;gap:14px;padding:12px 20px;background:var(--sf);border-bottom:2px solid var(--gold);position:sticky;top:0;z-index:100}
-.hd-icon{font-size:26px}.hd-t{font-size:15px;font-weight:800;color:var(--gold)}.hd-s{font-size:11px;color:var(--dim);margin-top:2px}
-.ti{max-width:1000px;margin:0 auto;padding:14px 24px}
-.sec{background:var(--sf);border:1px solid var(--bd);border-radius:8px;margin-bottom:14px;overflow:hidden}
-.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:var(--sf2);border-bottom:1px solid var(--bd);font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.5px}
-.sec-bd{padding:14px 16px}
-select,input[type=number],input[type=text]{background:var(--sf2);border:1px solid var(--bd);color:var(--text);padding:5px 9px;border-radius:5px;font-family:'Nanum Gothic',sans-serif;font-size:13px}
-select:focus,input:focus{outline:none;border-color:var(--gold)}
-.fg label{display:block;font-size:11px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+*::selection{background:rgba(38,79,120,.6)}
+body{font-family:'Nanum Gothic Coding',monospace;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;
+  background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:24px 24px;
+}
+.hd{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--sf);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+.hd-dots{display:flex;gap:6px;margin-right:4px}
+.hd-dots span{width:10px;height:10px;border-radius:50%;background:var(--bd)}
+.hd-icon{font-size:18px}
+.hd-t{font-size:14px;font-weight:700;color:var(--gold)}
+.hd-s{font-size:11px;color:var(--dim)}
+.hd-s::before{content:'// '}
+.ti{max-width:1000px;margin:0 auto;padding:20px 24px}
+.sec{background:var(--sf);border:1px solid var(--bd);border-radius:4px;margin-bottom:16px;overflow:hidden}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--sf2);border-bottom:1px solid var(--bd);font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.2px}
+.sec-hd::before{content:'// '}
+.sec-hd>span:first-child{color:var(--dim)}
+.sec-bd{padding:16px}
+select,input[type=number],input[type=text]{background:var(--sf2);border:1px solid var(--bd);color:var(--dfc);padding:6px 9px;border-radius:3px;font-family:'Nanum Gothic Coding',monospace;font-size:13px}
+select:focus,input:focus{outline:none;border-color:var(--keyword)}
+.fg label{display:block;font-size:11px;color:var(--dim);margin-bottom:4px}
+.fg label::before{content:'// '}
 .fg select,.fg input{width:100%}
-.cfg-lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:7px}
+.cfg-lbl{font-size:12px;color:var(--keyword);font-weight:700;margin-bottom:8px}
+.cfg-lbl::before{content:'let ';color:var(--keyword);font-weight:400}
+.cfg-lbl::after{content:' =';color:var(--text)}
 .btn-grp{display:flex;gap:4px;flex-wrap:wrap}
-.btn-grp button{flex:1;min-width:64px;padding:8px 4px;background:var(--sf2);border:1px solid var(--bd);border-radius:4px;color:var(--dim);cursor:pointer;font-family:'Nanum Gothic',sans-serif;font-size:13px;font-weight:700;transition:all .15s}
-.btn-grp button.active{background:rgba(232,184,75,.12);border-color:var(--gold);color:var(--gold)}
-.btn-reset{background:none;border:1px solid var(--red);color:var(--red);padding:6px 13px;border-radius:5px;cursor:pointer;font-family:'Nanum Gothic',sans-serif;font-size:13px;font-weight:700}
-.btn-reset:hover{background:rgba(248,113,113,.1)}
+.btn-grp button{flex:1;min-width:64px;padding:7px 4px;background:var(--sf2);border:1px solid var(--bd);border-radius:3px;color:var(--text2);cursor:pointer;font-family:'Nanum Gothic Coding',monospace;font-size:13px;font-weight:400;transition:all .12s}
+.btn-grp button::before{content:'"';color:var(--string);opacity:.7}
+.btn-grp button::after{content:'"';color:var(--string);opacity:.7}
+.btn-grp button:hover{border-color:var(--text2)}
+.btn-grp button.active{background:rgba(86,156,214,.14);border-color:var(--keyword);color:var(--dfc)}
+.btn-grp button.active::before,.btn-grp button.active::after{color:var(--dfc);opacity:1}
+.btn-reset{background:none;border:1px solid var(--red);color:var(--red);padding:5px 12px;border-radius:3px;cursor:pointer;font-family:'Nanum Gothic Coding',monospace;font-size:13px;font-weight:700}
+.btn-reset:hover{background:rgba(241,76,76,.1)}
 .sp-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.sp-ocard{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--sf);border:1px solid var(--bd);border-radius:5px}
-.sp-onum{color:var(--gold);font-size:11px;font-weight:800;min-width:18px}
+.sp-ocard{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:3px}
+.sp-onum{color:var(--gold);font-size:11px;font-weight:700;min-width:22px}
+.sp-onum::before{content:'['}.sp-onum::after{content:']'}
 .sp-ocard select{flex:1;font-size:12px}
-.sp-oval{color:var(--green);font-size:11px;min-width:46px;text-align:right}
+.sp-oval{color:var(--num);font-size:11px;min-width:46px;text-align:right}
 .sp-preset-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:10px}
-.acc-card{background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px}
+.acc-card{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:8px 12px;margin-bottom:8px}
 .acc-card-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .acc-search-wrap{position:relative;flex:1;min-width:140px}
-.acc-search-input{width:100%;background:var(--sf2);border:1px solid var(--bd);color:var(--text);padding:5px 9px;border-radius:5px;font-family:'Nanum Gothic',sans-serif;font-size:13px}
-.acc-search-input:focus{outline:none;border-color:var(--gold)}
+.acc-search-input{width:100%;background:var(--sf2);border:1px solid var(--bd);color:var(--string);padding:6px 9px;border-radius:3px;font-family:'Nanum Gothic Coding',monospace;font-size:13px}
+.acc-search-input:focus{outline:none;border-color:var(--keyword)}
 .acc-search-input::placeholder{color:var(--dimmer)}
-.acc-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--sf2);border:1px solid var(--gold);border-radius:5px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;display:none}
+.acc-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--sf2);border:1px solid var(--keyword);border-radius:3px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;display:none}
 .acc-dropdown.open{display:block}
-.acc-drop-item{padding:6px 10px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--text);font-family:'Nanum Gothic',sans-serif}
-.acc-drop-item:hover{background:rgba(232,184,75,.12)}
-.acc-drop-item.focused{background:rgba(232,184,75,.2);outline:none}
+.acc-drop-item{padding:6px 10px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--string);font-family:'Nanum Gothic Coding',monospace}
+.acc-drop-item:hover{background:rgba(86,156,214,.14)}
+.acc-drop-item.focused{background:rgba(86,156,214,.22);outline:none}
 .acc-drop-name{flex:1}
-.btn-red{background:none;border:1px solid var(--red);color:var(--red);padding:3px 9px;border-radius:4px;cursor:pointer;font-family:'Nanum Gothic',sans-serif;font-size:12px}
-.btn-add{background:none;border:1px solid var(--gold);color:var(--gold);padding:6px 13px;border-radius:5px;cursor:pointer;font-family:'Nanum Gothic',sans-serif;font-size:13px;font-weight:700}
-.btn-add:hover{background:rgba(232,184,75,.1)}
-.sp-preset-btn{background:var(--sf2);border:1px solid var(--bd);border-radius:5px;padding:6px 8px;color:var(--text);cursor:pointer;font-family:'Nanum Gothic',sans-serif;text-align:center;transition:all .15s;min-height:34px;white-space:nowrap}
-.sp-preset-btn:hover{border-color:var(--gold);background:rgba(232,184,75,.08)}
-.sp-preset-btn.active{border-color:var(--gold);background:rgba(232,184,75,.14)}
-.sp-preset-name{display:inline;font-size:12px;font-weight:800;color:var(--gold)}
-.sp-preset-desc{display:inline;font-size:11px;color:var(--text);margin-left:5px}
-.btn-sim{width:100%;padding:14px;background:linear-gradient(135deg,var(--gold2),var(--gold));border:none;border-radius:8px;color:#0a0c18;font-family:'Nanum Gothic',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:12px 0;letter-spacing:-.5px;transition:opacity .15s,transform .1s}
-.btn-sim:hover{opacity:.92}.btn-sim:active{transform:scale(.99)}
+.btn-red{background:none;border:1px solid var(--red);color:var(--red);padding:3px 9px;border-radius:3px;cursor:pointer;font-family:'Nanum Gothic Coding',monospace;font-size:12px}
+.btn-add{background:none;border:1px solid var(--keyword);color:var(--dfc);padding:5px 12px;border-radius:3px;cursor:pointer;font-family:'Nanum Gothic Coding',monospace;font-size:13px;font-weight:700}
+.btn-add:hover{background:rgba(86,156,214,.1)}
+.sp-preset-btn{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:6px 8px;color:var(--text);cursor:pointer;font-family:'Nanum Gothic Coding',monospace;text-align:center;transition:all .12s;min-height:34px;white-space:nowrap}
+.sp-preset-btn:hover{border-color:var(--keyword)}
+.sp-preset-btn.active{border-color:var(--keyword);background:rgba(86,156,214,.14)}
+.sp-preset-name{display:inline;font-size:12px;font-weight:700;color:var(--gold)}
+.sp-preset-desc{display:inline;font-size:11px;color:var(--num);margin-left:5px}
+.btn-sim{width:100%;padding:14px;background:var(--sf2);border:1px solid var(--keyword);border-radius:4px;color:var(--dfc);font-family:'Nanum Gothic Coding',monospace;font-size:15px;font-weight:700;cursor:pointer;margin:14px 0;letter-spacing:.2px;transition:background .12s;text-align:left}
+.btn-sim:hover{background:rgba(86,156,214,.12)}
+.btn-sim:active{transform:translateY(1px)}
+.btn-sim .car{display:inline-block;width:8px;height:15px;background:var(--dfc);vertical-align:-2px;margin-left:2px}
+@media (prefers-reduced-motion: no-preference){
+  .btn-sim .car{animation:blink 1s steps(1) infinite}
+}
+@keyframes blink{50%{opacity:0}}
 .res-wrap{overflow-x:auto}
-.rtbl{width:100%;border-collapse:collapse}
-.rtbl th{background:var(--sf2);padding:9px 11px;text-align:left;font-size:11px;color:var(--dim);border-bottom:1px solid var(--bd);white-space:nowrap}
-.rtbl td{padding:10px 11px;border-bottom:1px solid var(--bd);font-size:13px;vertical-align:middle}
+.rtbl{width:100%;border-collapse:collapse;font-size:13px}
+.rtbl th{background:var(--sf2);padding:8px 11px;text-align:left;font-size:11px;color:var(--dim);border-bottom:1px solid var(--bd);white-space:nowrap;font-weight:700}
+.rtbl td{padding:9px 11px;border-bottom:1px solid var(--bd);vertical-align:middle;color:var(--text)}
 .rtbl tr:last-child td{border-bottom:none}
-.rtbl tbody tr:hover td{background:rgba(255,255,255,.015)}
-.bv-cell{font-family:'Courier New',monospace;font-weight:800;color:var(--gold)}
-.info-box{font-size:13px;line-height:1.9;color:var(--text2)}
+.rtbl tbody tr:hover td{background:rgba(255,255,255,.02)}
+.rtbl tbody tr.rank1 td{background:rgba(220,220,170,.06)}
+.rtbl tbody tr.rank1 td:first-child{box-shadow:inset 3px 0 0 var(--gold)}
+.rk{color:var(--dimmer)}
+.rk.rk1{color:var(--gold);font-weight:700}
+.str{color:var(--string)}
+.str::before,.str::after{content:'"';opacity:.6}
+.bv-cell{font-weight:700;color:var(--num)}
+.info-box{font-size:13px;line-height:2;color:var(--text2)}
+.info-box::before{content:none}
 </style>
 </head>
 <body>
 
 <div class="hd">
-  <div class="hd-icon">🛡️</div>
-  <div><div class="hd-t">체+방 전용 계산기</div><div class="hd-s">개인용 · 고정 셋팅 기반 체력×방어 최고값 탐색</div></div>
+  <div class="hd-dots"><span></span><span></span><span></span></div>
+  <div class="hd-icon"></div>
+  <div><div class="hd-t">tank_calc.js</div><div class="hd-s">개인용 · 체력×방어 최고값 탐색</div></div>
 </div>
 
 <div class="ti">
@@ -157,7 +191,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
     </div>
   </div>
 
-  <button class="btn-sim" onclick="runCalc()">🛡️ 계산하기</button>
+  <button class="btn-sim" onclick="runCalc()">▶ runCalc()<span class="car"></span></button>
 
   <div class="sec" id="res-sec" style="display:none">
     <div class="sec-hd">🏆 결과 — 타입별 체방 젤 높은셋팅</div>
@@ -663,19 +697,18 @@ function runCalc(){
 
 function renderResult(rows){
   const el=document.getElementById('res-body');
-  const medals=['🥇','🥈','🥉'];
   let html=`<table class="rtbl"><thead><tr>
-    <th>순위</th><th>타입</th><th>장신구</th><th>인첸트</th><th>젬 배분(체/방)</th><th>펜던트</th><th>체 / 공 / 방</th><th>(체×방)</th><th>(체+방)</th>
+    <th>#</th><th>타입</th><th>장신구</th><th>인첸트</th><th>젬(체/방)</th><th>펜던트</th><th>체 / 공 / 방</th><th>체×방</th><th>체+방×4</th>
   </tr></thead><tbody>`;
   rows.forEach((r,i)=>{
-    const rank=i<3?medals[i]:`${i+1}`;
-    html+=`<tr>
+    const rank=i===0?'<span class="rk rk1">#1</span>':`<span class="rk">#${i+1}</span>`;
+    html+=`<tr class="${i===0?'rank1':''}">
       <td>${rank}</td>
-      <td>${r.dt}</td>
-      <td>${r.acc.name}</td>
+      <td class="str">${r.dt}</td>
+      <td class="str">${r.acc.name}</td>
       <td>${SK[r.acc.ench]}</td>
       <td>${r.gs.nHp} / ${r.gs.nDef}</td>
-      <td>${r.pend.label}</td>
+      <td class="str">${r.pend.label}</td>
       <td><span style="color:var(--hpc)">${r.fH.toLocaleString('ko-KR')}</span> / <span style="color:var(--atc)">${r.fA.toLocaleString('ko-KR')}</span> / <span style="color:var(--dfc)">${r.fD.toLocaleString('ko-KR')}</span></td>
       <td class="bv-cell">${r.bv.toLocaleString('ko-KR')}</td>
       <td class="bv-cell">${r.ebv.toLocaleString('ko-KR')}</td>

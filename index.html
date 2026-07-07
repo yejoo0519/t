@@ -51,13 +51,17 @@ select:focus,input:focus{outline:none;border-color:var(--keyword)}
 .btn-grp button.active::before,.btn-grp button.active::after{color:var(--dfc);opacity:1}
 .btn-reset{background:none;border:1px solid var(--red);color:var(--red);padding:5px 12px;border-radius:3px;cursor:pointer;font-family:'Nanum Gothic Coding',monospace;font-size:13px;font-weight:700}
 .btn-reset:hover{background:rgba(241,76,76,.1)}
-.sp-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.sp-opts{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
 .sp-ocard{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:3px}
 .sp-onum{color:var(--gold);font-size:11px;font-weight:700;min-width:22px}
 .sp-onum::before{content:'['}.sp-onum::after{content:']'}
 .sp-ocard select{flex:1;font-size:12px}
 .sp-oval{color:var(--num);font-size:11px;min-width:46px;text-align:right}
 .sp-preset-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:10px}
+@media (max-width:520px){
+  .sp-preset-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sp-preset-name,.sp-preset-desc{display:block;margin-left:0}
+}
 .acc-card{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:8px 12px;margin-bottom:8px}
 .acc-card-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .acc-search-wrap{position:relative;flex:1;min-width:140px}
@@ -107,7 +111,7 @@ select:focus,input:focus{outline:none;border-color:var(--keyword)}
 
 <div class="hd">
   <div class="hd-dots"><span></span><span></span><span></span></div>
-  <div class="hd-icon"></div>
+  <div class="hd-icon">🐉</div>
   <div><div class="hd-t">tank_calc.js</div><div class="hd-s">개인용 · 체력×방어 최고값 탐색</div></div>
 </div>
 

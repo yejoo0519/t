@@ -3,8 +3,8 @@
 길드원은 계정 없이 **닉네임 선택 → 비밀번호 4자리 → 인증 사진 → 뽑기**로 끝.
 관리자만 이메일로 로그인해서 GP, 상품, 라스트원을 관리해.
 
-- 뽑기 화면: `https://yejoo0519.github.io/t/kuji/`
-- 관리자: `https://yejoo0519.github.io/t/kuji/admin.html`
+- 뽑기 화면: `https://yejoo0519.github.io/t/`
+- 관리자: `https://yejoo0519.github.io/t/admin.html`
 
 ## 처음 한 번만 하는 설정 (10분)
 
@@ -21,7 +21,7 @@
 
 ### 3. 사이트에 연결
 1. **Project Settings → API** (또는 Data API) 에서 `Project URL` 과 `anon public` 키 복사
-2. 이 저장소 `kuji/config.js` 에 붙여넣고 커밋
+2. 이 저장소 `config.js` 에 붙여넣고 커밋
    - `service_role` 키는 절대 넣지 마!
 
 ### 4. GitHub Pages 켜기 (이미 켜져 있으면 생략)

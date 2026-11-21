@@ -111,16 +111,15 @@ function renderBoard() {
     return `<div class="cns" aria-label="남은 ${p.remaining}장 / ${p.total}장"><span class="cns-l">남은<br>수량</span>${h}</div>`;
   };
   const done = p => p.remaining ? '' : '<span class="stamp">종료</span>';
-  const pic = p => p.image ? `<img src="${esc(p.image)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`;
-  const gl = p => `<span class="gl"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>`;
+  const logo = p => `<span class="glogo"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>`;
   const big = prizes.filter(p => p.total <= 3), small = prizes.filter(p => p.total > 3);
   $('popTop').innerHTML = big.map(p => `<div class="pc ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pc-h">${gl(p)}<span class="nm">${esc(p.name)}</span></div>
-    <div class="pc-img">${pic(p)}${done(p)}</div>
+    <div class="pc-art">${p.image ? `<img src="${esc(p.image)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`}${logo(p)}${done(p)}</div>
+    <div class="ribbon"><span>${esc(p.name)}</span></div>
     <div class="paste light">${tix(p)}</div>
     ${count(p)}</div>`).join('');
   $('popRows').innerHTML = small.map(p => `<div class="pr ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pr-l">${gl(p)}${p.image ? `<div class="pr-img"><img src="${esc(p.image)}" alt=""></div>` : ''}<span class="nm">${esc(p.name)}</span></div>
+    <div class="pr-l">${logo(p)}<div class="pr-name">${p.image ? `<img src="${esc(p.image)}" alt="">` : ''}<div class="ribbon"><span>${esc(p.name)}</span></div></div></div>
     <div class="pr-b"><div class="paste">${tix(p)}</div>${count(p)}</div>
     ${done(p)}</div>`).join('');
   $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>

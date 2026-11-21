@@ -78,6 +78,7 @@
       <button class="kx" id="pickClose" aria-label="닫기">✕</button>
     </div>
     <div id="pickStage">
+      <div class="stock" id="stock"></div>
       <div class="pile" id="pile"></div>
       <div class="kbox-f">
         <span id="pickCount">0 / 0</span>
@@ -255,11 +256,16 @@ function unopenedNos() { const a = []; for (let n = 1; n <= size(); n++) if (!op
 function renderPile() {
   const m = me(), cap = Math.min(m?.credits || 0, left());
   picked = picked.filter(n => !opened.has(n)).slice(0, cap);
-  $('pickInfo').textContent = `뽑기권 ${m?.credits || 0}장 — 마음에 드는 쿠지를 ${cap}장까지 골라줘`;
-  $('pile').innerHTML = unopenedNos().map(n => {
-    const i = picked.indexOf(n), r = (n * 53) % 13 - 6, c = ['#e63946', '#f4a261', '#2a9d8f', '#457b9d', '#9b5de5', '#f15bb5'][n % 6];
-    return `<button class="fold ${i >= 0 ? 'on' : ''}" data-n="${n}" style="--r:${r}deg;--k:${c}" aria-pressed="${i >= 0}" aria-label="쿠지 ${n}"><span></span>${i >= 0 ? `<em>${i + 1}</em>` : ''}</button>`;
-  }).join('');
+  $('pickInfo').textContent = `뽑기권 ${m?.credits || 0}장 — 원하는 번호를 ${cap}장까지 골라줘`;
+  $('stock').innerHTML = `<div class="stock-n"><small>남은 쿠지</small><b>${left()}</b><span>/ ${size()}</span></div>
+    <div class="stock-list">${prizes.map(p => `<span class="stk ${p.remaining ? '' : 'zero'}" style="--c:${esc(p.color)}"><i>${esc(letter(p.grade))}</i><em>${esc(p.name)}</em><b>${p.remaining}</b></span>`).join('')}</div>`;
+  let h = '';
+  for (let n = 1; n <= size(); n++) {
+    if (opened.has(n)) { h += `<div class="kc done" aria-label="${n}번 뽑힘"><span class="kc-no">${n}</span><span class="kc-st">완</span></div>`; continue; }
+    const i = picked.indexOf(n);
+    h += `<button class="kc ${i >= 0 ? 'on' : ''}" data-n="${n}" aria-pressed="${i >= 0}" aria-label="${n}번 쿠지"><span class="kc-no">${n}</span>${i >= 0 ? `<em>${i + 1}</em>` : ''}</button>`;
+  }
+  $('pile').innerHTML = h;
   $('pickCount').innerHTML = `<b>${picked.length}</b> / ${cap}장 고름`;
   $('tearBtn').disabled = busy || !picked.length;
   $('tearBtn').textContent = picked.length ? `${picked.length}장 뜯기` : '골라서 뜯기';
@@ -315,7 +321,7 @@ $('regBtn').addEventListener('click', doRegister);
 $('goPick').addEventListener('click', openPick);
 $('pickClose').addEventListener('click', closePick);
 $('pile').addEventListener('click', e => {
-  const b = e.target.closest('.fold'); if (!b || busy) return;
+  const b = e.target.closest('button.kc'); if (!b || busy) return;
   const n = +b.dataset.n, i = picked.indexOf(n), cap = Math.min(me()?.credits || 0, left());
   if (i >= 0) picked.splice(i, 1);
   else if (picked.length >= cap) { toast(`뽑기권은 ${cap}장이야`); return; }

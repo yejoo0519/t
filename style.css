@@ -239,17 +239,38 @@ header .btn.ghost{color:#fff;border-color:#fff8}
 #pickErr{margin:0 18px 14px;color:#fff;background:rgba(0,0,0,.25);border-radius:10px;padding:0 10px}
 #pickErr:empty{display:none}
 
-/* 박스 속 접힌 쿠지 */
-.pile{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px 8px;margin:0 14px;padding:18px 14px;border-radius:18px;
-  background:radial-gradient(circle at 50% 30%,#3a0a0d,#1e0507 75%);box-shadow:inset 0 10px 30px rgba(0,0,0,.6),inset 0 0 0 2px rgba(0,0,0,.4)}
-.fold{position:relative;aspect-ratio:4/3;border:0;padding:0;cursor:pointer;border-radius:4px;transform:rotate(var(--r));transition:transform .15s,filter .15s;
-  background:linear-gradient(135deg,#fff 0 46%,#dcdde6 47% 49%,#f6f6fa 50%);box-shadow:0 3px 0 rgba(0,0,0,.35),0 6px 10px rgba(0,0,0,.4)}
-.fold::before{content:"";position:absolute;left:0;right:0;top:0;height:22%;background:var(--k);border-radius:4px 4px 0 0;opacity:.9}
-.fold::after{content:"";position:absolute;left:8px;right:8px;bottom:22%;border-top:1.5px dashed rgba(0,0,0,.18)}
-.fold span{position:absolute;left:50%;top:22%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff7c2,#f7c234 60%,#c58b00);box-shadow:0 1px 2px rgba(0,0,0,.4)}
-.fold:hover{transform:rotate(var(--r)) translateY(-3px)}
-.fold.on{transform:rotate(0) translateY(-6px) scale(1.12);z-index:1;box-shadow:0 0 0 3px var(--gold),0 10px 18px rgba(0,0,0,.5)}
-.fold em{position:absolute;right:-8px;top:-10px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-style:normal;font-family:"Black Han Sans";font-size:14px;background:var(--gold);color:#3a2300;box-shadow:0 2px 4px rgba(0,0,0,.4)}
+/* 쿠지 고르기 판 (온라인 쿠지 번호판) */
+.stock{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 14px 12px;padding:10px 14px;border-radius:14px;background:rgba(0,0,0,.22)}
+.stock-n{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.stock-n small{font-size:12px;font-weight:800;margin-right:4px;opacity:.9}
+.stock-n b{font-family:"Black Han Sans";font-weight:400;font-size:30px;line-height:1;color:#fff}
+.stock-n span{font-weight:700;opacity:.85}
+.stock-list{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+.stk{display:inline-flex;align-items:center;gap:6px;max-width:220px;padding:3px 4px 3px 3px;border-radius:999px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+.stk i{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--c);color:#fff;font-style:normal;font-family:"Black Han Sans";font-size:14px}
+.stk em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stk b{flex:none;min-width:24px;padding:2px 7px;border-radius:999px;background:var(--soft);font-family:"Black Han Sans";font-weight:400;font-size:14px;text-align:center}
+.stk.zero{opacity:.45}.stk.zero b{background:#ddd}
+
+.pile{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:10px;margin:0 14px;padding:16px;border-radius:18px;background:#fff7ec;box-shadow:inset 0 0 0 3px rgba(0,0,0,.06)}
+.kc{position:relative;aspect-ratio:1;border:0;padding:0;border-radius:12px;cursor:pointer;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 50%,transparent 0 30%,transparent 30%),
+             repeating-linear-gradient(45deg,rgba(255,255,255,.14) 0 6px,transparent 6px 12px),
+             linear-gradient(160deg,#f04a3f,#c81f24);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.85),inset 0 0 0 5px #c81f24,0 3px 0 #8f1116,0 6px 10px -4px rgba(0,0,0,.35);
+  transition:transform .15s,box-shadow .15s}
+.kc-no{display:grid;place-items:center;width:62%;aspect-ratio:1;border-radius:50%;background:#fff;color:#c81f24;
+  font-family:"Black Han Sans";font-weight:400;font-size:clamp(16px,2.4vw,22px);line-height:1;box-shadow:inset 0 0 0 2px #f6b81a,0 2px 0 rgba(0,0,0,.18)}
+button.kc:hover{transform:translateY(-3px)}
+.kc.on{transform:translateY(-4px) scale(1.06);background:linear-gradient(160deg,#ffe27a,#f6b81a);
+  box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px #b77d00,0 3px 0 #8a5a00,0 0 0 4px rgba(246,184,26,.45),0 10px 16px -6px rgba(0,0,0,.4)}
+.kc.on .kc-no{color:#8a5a00;box-shadow:inset 0 0 0 2px #b77d00}
+.kc em{position:absolute;right:-7px;top:-7px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-style:normal;font-family:"Black Han Sans";font-size:13px;background:#1b1416;color:#fff;box-shadow:0 0 0 2px #fff}
+.kc.done{cursor:default;background:#e4ddd6;box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px #d3cbc3}
+.kc.done .kc-no{position:absolute;left:6px;top:4px;width:auto;aspect-ratio:auto;background:transparent;color:#a89c92;box-shadow:none;font-size:12px}
+.kc-st{position:absolute;display:grid;place-items:center;width:58%;aspect-ratio:1;border-radius:50%;border:3px solid rgba(200,31,36,.75);color:rgba(200,31,36,.85);
+  font-family:"Black Han Sans";font-size:clamp(14px,2vw,18px);transform:rotate(-14deg)}
+@media(prefers-reduced-motion:reduce){.kc{transition:none}}
 
 /* 뜯기 연출 */
 .reveal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin:0 14px;padding:18px 14px;border-radius:18px;background:radial-gradient(circle at 50% 30%,#3a0a0d,#1e0507 75%)}
@@ -281,7 +302,7 @@ header .btn.ghost{color:#fff;border-color:#fff8}
 @keyframes stick{from{transform:translateY(-40px) rotate(-25deg) scale(1.6);opacity:0}to{transform:rotate(var(--r,0deg));opacity:1}}
 @keyframes glow{50%{box-shadow:0 0 0 3px var(--gold),0 0 18px 6px rgba(247,201,72,.8)}}
 @media(prefers-reduced-motion:reduce){.rv-f,.rv-b,.fold{transition:none}.rv:not(.open) .rv-f,.rv.open::after,.tix.fresh{animation:none}}
-@media(max-width:600px){.pile{grid-template-columns:repeat(auto-fill,minmax(54px,1fr));margin:0 8px;padding:12px 8px}.reveal{grid-template-columns:repeat(2,minmax(0,1fr));margin:0 8px}}
+@media(max-width:600px){.pile{grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin:0 8px;padding:10px}.stock{margin:0 8px 10px}.stk em{max-width:90px}.reveal{grid-template-columns:repeat(2,minmax(0,1fr));margin:0 8px}}
 
 /* ---------- 쿠지판(왼쪽) + 길포 등록(오른쪽) ---------- */
 .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:24px;align-items:start}

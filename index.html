@@ -104,22 +104,17 @@ function renderBoard() {
     const L = esc(letter(p.grade));
     return '<div class="tixs">' + got.map(o => `<span class="tix" style="--r:${(o.no * 37) % 7 - 3}deg" title="${esc(o.opened_name)}"><b>${L}</b><i>상</i></span>`).join('') + '</div>';
   };
-  // 남은 장수 카운트다운: N장 ... 1장, 뽑힌 만큼 앞에서부터 "끝" 스티커
-  const count = p => {
-    let h = '';
-    for (let n = p.total; n >= 1; n--) h += `<span class="cn ${n > p.remaining ? 'done' : n === p.remaining ? 'now' : ''}"><b>${n}</b><small>장</small></span>`;
-    return `<div class="cns" aria-label="남은 ${p.remaining}장 / ${p.total}장"><span class="cns-l">남은<br>수량</span>${h}</div>`;
-  };
+  // 남은 수량 씰 (POP 가격 별딱지)
+  const count = p => `<div class="seal ${p.remaining ? '' : 'zero'}" aria-label="남은 ${p.remaining}장 / ${p.total}장"><div><small>남은</small><b>${p.remaining}</b><em>/ ${p.total}장</em></div></div>`;
   const done = p => p.remaining ? '' : '<span class="stamp">종료</span>';
   const logo = p => `<span class="glogo"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>`;
   const big = prizes.filter(p => p.total <= 3), small = prizes.filter(p => p.total > 3);
   $('popTop').innerHTML = big.map(p => `<div class="pc ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pc-art">${p.image ? `<img src="${esc(p.image)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`}${logo(p)}${done(p)}</div>
-    <div class="ribbon"><span>${esc(p.name)}</span></div>
-    <div class="paste light">${tix(p)}</div>
-    ${count(p)}</div>`).join('');
+    <div class="pc-art">${p.image ? `<img src="${esc(p.image)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`}${logo(p)}${count(p)}${done(p)}</div>
+    <p class="pname">${esc(p.name)}</p>
+    <div class="paste light">${tix(p)}</div></div>`).join('');
   $('popRows').innerHTML = small.map(p => `<div class="pr ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pr-l">${logo(p)}<div class="pr-name">${p.image ? `<img src="${esc(p.image)}" alt="">` : ''}<div class="ribbon"><span>${esc(p.name)}</span></div></div></div>
+    <div class="pr-l">${logo(p)}<div class="pr-name">${p.image ? `<img src="${esc(p.image)}" alt="">` : ''}<p class="pname">${esc(p.name)}</p></div></div>
     <div class="pr-b"><div class="paste">${tix(p)}</div>${count(p)}</div>
     ${done(p)}</div>`).join('');
   $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>

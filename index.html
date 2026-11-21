@@ -91,7 +91,7 @@
       <div class="stage" id="stage">
         <div class="fx" id="fx" aria-hidden="true"></div>
         <div class="stage-prog" id="prog"></div>
-        <div class="tkt-wrap" id="tktWrap"></div>
+        <div class="tkt-wrap" id="tktWrap" tabindex="0" aria-label="쿠지. 엔터를 누르면 뜯고 펼쳐요"></div>
         <p class="stage-hint" id="stageHint">쿠지를 탭해서 뜯어줘</p>
       </div>
       <div class="summary" id="summary" hidden></div>
@@ -313,6 +313,14 @@ function sfx(kind) {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
     const ac = audio, t = ac.currentTime;
+    if (kind === 'tick') {
+      const len = 0.045, buf = ac.createBuffer(1, Math.floor(ac.sampleRate * len), ac.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      f.type = 'highpass'; f.frequency.value = 1800 + Math.random() * 1500; g.gain.value = .22;
+      src.buffer = buf; src.connect(f).connect(g).connect(ac.destination); src.start(t);
+      return;
+    }
     if (kind === 'rip') {
       const len = 0.28, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 1.5) * (Math.random() < .35 ? 1 : .3);
@@ -339,15 +347,19 @@ function bits(n, cls, colors) {
   return h;
 }
 function ticketHTML(r) {
-  return `<div class="tkt" style="--c:${esc(r.color)}">
+  return `<div class="tkt" style="--c:${esc(r.color)};--p:0;--o:0">
     <div class="tkt-in">
       <div class="tkt-res">
         ${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}
         <span class="glogo sm"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<i>상</i>' : ''}</span>
         <p class="pname">${esc(r.name)}</p>
       </div>
-      <div class="tkt-flap"><span class="tkt-seal">쿠지</span><span class="tkt-fold"></span></div>
-      <div class="tkt-strip"><span>여기를 뜯어요</span></div>
+      <div class="tkt-flap"><span class="tkt-seal">쿠지</span><span class="flap-hint">↑ 위로 쭉 펼치기</span></div>
+      <div class="tkt-strip" aria-label="절취선을 잡고 오른쪽으로 끌어서 뜯기">
+        <div class="strip-rest"><span>잡고 쭉 뜯기 →</span></div>
+        <div class="strip-peel"></div>
+        <div class="strip-grip"></div>
+      </div>
     </div>
   </div>`;
 }
@@ -356,41 +368,98 @@ function startReveal() {
   showTicket();
 }
 function showTicket() {
-  const r = lastResults[cur];
-  phase = 'closed';
+  phase = 'closed'; tearP = 0; openO = 0; lastStep = 0;
   $('stage').className = 'stage';
   $('fx').innerHTML = '';
   $('prog').textContent = `${cur + 1} / ${lastResults.length}`;
-  $('tktWrap').innerHTML = ticketHTML(r);
-  $('stageHint').textContent = '쿠지를 탭해서 뜯어줘';
+  $('tktWrap').innerHTML = ticketHTML(lastResults[cur]);
+  $('stageHint').textContent = '위쪽 절취선을 잡고 오른쪽으로 쭉 끌어줘';
   $('nextBtn').hidden = true;
 }
-function tear() {
-  if (phase !== 'closed') return;
-  const r = lastResults[cur], tier = tierOf(r), t = $('tktWrap').firstElementChild;
-  phase = 'busy'; $('stageHint').textContent = '';
-  sfx('rip');
-  t.classList.add('torn');
-  $('fx').insertAdjacentHTML('beforeend', `<div class="fx-bits">${bits(14, 'paper', ['#fff', '#f3efe8', '#e2312f'])}</div>`);
-  const charge = tier === 'top' ? 1100 : tier === 'high' ? 500 : 0;
-  setTimeout(() => {
-    if (charge) { t.classList.add('charge'); $('stage').classList.add('charge-' + tier); }
-    setTimeout(() => {
-      t.classList.remove('charge'); t.classList.add('open');
-      $('stage').classList.add('hit-' + tier);
-      sfx(tier);
-      const colors = ['#f6b81a', '#e2312f', '#fff', r.color, '#2f9e5a', '#1f7ae0'];
-      $('fx').insertAdjacentHTML('beforeend', `<div class="fx-rays"></div><div class="fx-flash"></div>`
-        + (tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 70 : 30, 'conf', colors)}</div>` : `<div class="fx-bits">${bits(10, 'spark', ['#fff', '#f6b81a'])}</div>`)
-        + (tier === 'top' ? `<div class="fx-banner"><span>대박!</span></div>` : ''));
-      setTimeout(() => {
-        phase = 'open';
-        if (cur < lastResults.length - 1) { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠지 (${cur + 2}/${lastResults.length})`; $('stageHint').textContent = ''; }
-        else showSummary(900);
-      }, 700);
-    }, charge);
-  }, 380);
+const tkt = () => $('tktWrap').firstElementChild;
+let tearP = 0, openO = 0, lastStep = 0, drag = null, autoT = null;
+function setTear(p) {
+  tearP = Math.max(tearP, Math.min(1, p));
+  tkt().style.setProperty('--p', tearP.toFixed(3));
+  const step = Math.floor(tearP * 14);
+  if (step > lastStep) { lastStep = step; sfx('tick'); try { navigator.vibrate?.(6); } catch (e) {} }
+  if (tearP >= .96) completeTear();
 }
+function completeTear() {
+  if (phase !== 'closed') return;
+  const r = lastResults[cur], tier = tierOf(r), t = tkt();
+  phase = 'torn'; drag = null;
+  t.style.setProperty('--p', 1); t.classList.add('torn');
+  sfx('rip');
+  $('fx').insertAdjacentHTML('beforeend', `<div class="fx-bits top">${bits(14, 'paper', ['#fff', '#fff6d1', '#e2312f'])}</div>`);
+  if (tier !== 'normal') { t.classList.add('charge', 'charge-' + tier); $('stage').classList.add('charge-' + tier); }
+  $('stageHint').textContent = '이제 덮개를 잡고 위로 쭉 펼쳐줘';
+}
+function setOpen(o) {
+  openO = Math.max(0, Math.min(1, o));
+  tkt().style.setProperty('--o', openO.toFixed(3));
+}
+function completeOpen() {
+  if (phase !== 'torn') return;
+  const r = lastResults[cur], tier = tierOf(r), t = tkt();
+  phase = 'busy'; drag = null;
+  t.classList.remove('charge'); t.classList.add('settle', 'open'); setOpen(1);
+  $('stage').classList.add('hit-' + tier);
+  sfx(tier); try { navigator.vibrate?.(tier === 'top' ? [30, 40, 60] : 20); } catch (e) {}
+  const colors = ['#f6b81a', '#e2312f', '#fff', r.color, '#2f9e5a', '#1f7ae0'];
+  $('fx').insertAdjacentHTML('beforeend', `<div class="fx-rays"></div><div class="fx-flash"></div>`
+    + (tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 70 : 30, 'conf', colors)}</div>` : `<div class="fx-bits">${bits(10, 'spark', ['#fff', '#f6b81a'])}</div>`)
+    + (tier === 'top' ? `<div class="fx-banner"><span>대박!</span></div>` : ''));
+  $('stageHint').textContent = '';
+  setTimeout(() => {
+    phase = 'open';
+    if (cur < lastResults.length - 1) { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠지 (${cur + 2}/${lastResults.length})`; }
+    else showSummary(900);
+  }, 700);
+}
+// 탭만 했을 때: 자동으로 쭉 뜯기 / 쭉 펼치기
+function autoRun(kind) {
+  cancelAnimationFrame(autoT);
+  const t0 = performance.now(), from = kind === 'tear' ? tearP : openO, dur = kind === 'tear' ? 650 : 520;
+  const stepF = now => {
+    const k = Math.min(1, (now - t0) / dur), v = from + (1 - from) * (1 - Math.pow(1 - k, 2));
+    if (kind === 'tear') { if (phase !== 'closed') return; setTear(v); }
+    else { if (phase !== 'torn') return; setOpen(v); if (k >= 1) return completeOpen(); }
+    if (k < 1) autoT = requestAnimationFrame(stepF);
+  };
+  autoT = requestAnimationFrame(stepF);
+}
+$('tktWrap').addEventListener('pointerdown', e => {
+  const t = tkt(); if (!t) return;
+  if (phase === 'closed') {
+    const r = t.querySelector('.tkt-strip').getBoundingClientRect();
+    drag = {mode: 'tear', left: r.left, w: r.width, x0: e.clientX, y0: e.clientY, moved: false};
+  } else if (phase === 'torn') {
+    const r = t.getBoundingClientRect();
+    drag = {mode: 'open', h: r.height, x0: e.clientX, y0: e.clientY, moved: false};
+    t.classList.remove('settle');
+  } else return;
+  $('tktWrap').setPointerCapture?.(e.pointerId);
+  e.preventDefault();
+});
+$('tktWrap').addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) > 6) drag.moved = true;
+  if (drag.mode === 'tear') setTear((e.clientX - drag.left) / drag.w);
+  else setOpen((drag.y0 - e.clientY) / (drag.h * .85));
+});
+const endDrag = () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.mode === 'tear') { if (!d.moved && phase === 'closed') autoRun('tear'); }
+  else if (phase === 'torn') {
+    if (!d.moved || openO >= .45) autoRun('open');
+    else { tkt().classList.add('settle'); setOpen(0); }
+  }
+};
+$('tktWrap').addEventListener('pointerup', endDrag);
+$('tktWrap').addEventListener('pointercancel', endDrag);
+$('tktWrap').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); phase === 'closed' ? autoRun('tear') : autoRun('open'); } });
 function showSummary(delay = 0) {
   setTimeout(() => {
     $('stage').hidden = true; $('nextBtn').hidden = true; $('skipAll').hidden = true;
@@ -434,7 +503,6 @@ $('pickRand').addEventListener('click', () => {
   renderPile();
 });
 $('tearBtn').addEventListener('click', doTear);
-$('tktWrap').addEventListener('click', tear);
 $('nextBtn').addEventListener('click', () => { if (phase === 'open') { cur++; showTicket(); } });
 $('skipAll').addEventListener('click', () => { phase = 'done'; showSummary(); });
 $('stickBtn').addEventListener('click', stick);

@@ -1,14 +1,21 @@
 -- =========================================================
--- 업데이트 SQL (11/22): "늘어난 GP만큼 뽑기" 방식으로 변경
--- 이미 setup.sql 을 실행한 프로젝트에서 이것만 한 번 Run.
+-- 업데이트 SQL — 지금 DB가 어떤 상태든 이것 하나만 Run 하면 최신 구조가 돼.
+-- (여러 번 돌려도 괜찮아)
 -- =========================================================
 
-alter table public.members rename column points to base_gp;
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'members' and column_name = 'points') then
+    alter table public.members rename column points to base_gp;
+  end if;
+end $$;
+alter table public.members add column if not exists base_gp int not null default 0;
 alter table public.members add column if not exists last_gp int not null default 0;
 alter table public.members add column if not exists used_gp int not null default 0;
-update public.members set last_gp = base_gp, used_gp = 0;
+update public.members set last_gp = base_gp where last_gp < base_gp;
 alter table public.draws add column if not exists reported_gp int;
 
+-- ---------- 뽑기 (서버에서 처리: 확률/포인트 조작 불가) ----------
 -- ---------- 뽑기 (서버에서 처리: 확률/GP 계산 조작 불가) ----------
 -- 뽑기 가능 GP = 지금 인증한 GP - 기준 GP - 이미 쓴 GP
 drop function if exists public.draw_kuji(uuid, text, int, text);
@@ -88,6 +95,17 @@ begin
   return jsonb_build_object('results', results, 'count', k, 'spent', k * s.cost);
 end $$;
 
-revoke all on function public.draw_kuji(uuid, text, int, text, int) from public;
-grant execute on function public.draw_kuji(uuid, text, int, text, int) to anon, authenticated;
+-- 뽑기는 서버 함수(kuji-draw)만 호출 가능
+revoke all on function public.draw_kuji(uuid, text, int, text, int) from public, anon, authenticated;
+grant execute on function public.draw_kuji(uuid, text, int, text, int) to service_role;
+
+-- AI 호출 전에 비밀번호부터 확인 (비번 없으면 true = 첫 뽑기)
+create or replace function public.verify_pin(p_member uuid, p_pin text)
+returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce((select pin_hash = crypt(p_pin, pin_hash) from public.member_pins where member_id = p_member), true);
+$$;
+revoke all on function public.verify_pin(uuid, text) from public, anon, authenticated;
+grant execute on function public.verify_pin(uuid, text) to service_role;
+
 notify pgrst, 'reload schema';

@@ -1,7 +1,7 @@
 # 길드 쿠지 뽑기
 
 길드원은 계정 없이 **닉네임 선택 → 비밀번호 4자리 → GP 스샷 → 뽑기**.
-GP는 서버가 스샷에서 직접 읽어서(Gemini) 계산해. 브라우저에서 숫자를 보낼 방법이 없어서 조작이 안 돼.
+GP는 서버가 스샷에서 직접 읽어서(Claude API) 계산해. 브라우저에서 숫자를 보낼 방법이 없어서 조작이 안 돼.
 
 뽑을 수 있는 양 = (스샷 GP − 기준 GP − 이미 쓴 GP) ÷ 1회 GP. 남는 GP는 이월.
 
@@ -12,14 +12,16 @@ GP는 서버가 스샷에서 직접 읽어서(Gemini) 계산해. 브라우저에
 
 ### 1. DB (Supabase SQL Editor)
 - 새 프로젝트: `setup.sql` 한 번 Run (맨 아래 관리자 이메일 바꾸기)
-- 이미 setup.sql 을 돌린 프로젝트: `migration.sql` → `migration2.sql` 순서로 Run
+- 이미 setup.sql 을 돌린 프로젝트: `update.sql` 하나만 Run (상태 상관없이 최신으로 맞춰줌, 여러 번 돌려도 OK)
 
 ### 2. 관리자 계정
 - **Authentication → Users → Add user** (setup.sql 에 적은 이메일, Auto Confirm 체크)
 - **Authentication → Sign In / Providers** 에서 "Allow new users to sign up" 끄기
 
-### 3. Gemini 키 (무료)
-- https://aistudio.google.com/apikey → **Create API key** → 복사
+### 3. Claude API 키
+- https://console.anthropic.com → **Billing** 에서 크레딧 충전 (최소 금액이면 충분)
+- **API Keys → Create Key** → 복사
+- 비용: 스샷 1장 인식에 약 $0.005 (Sonnet 기준)
 
 ### 4. 서버 함수 (Supabase 대시보드)
 1. 왼쪽 **Edge Functions → Deploy a new function → Via Editor**
@@ -28,8 +30,8 @@ GP는 서버가 스샷에서 직접 읽어서(Gemini) 계산해. 브라우저에
 4. 그 함수 **Details/Settings** 에서 **Verify JWT (Enforce JWT verification) 끄기** → Save
    (publishable 키는 JWT가 아니라서 이게 켜져 있으면 401 에러)
 5. **Edge Functions → Secrets** 에 추가
-   - `GEMINI_API_KEY` = 3번에서 복사한 키
-   - (선택) `GEMINI_MODEL` = 다른 모델 쓰고 싶을 때. 기본 `gemini-3.8-flash`
+   - `ANTHROPIC_API_KEY` = 3번에서 복사한 키
+   - (선택) `CLAUDE_MODEL` = 기본 `claude-sonnet-5-5`. 더 싸게 하려면 `claude-haiku-5-5`
 
 ### 5. 사이트
 - `config.js` 에 Project URL + publishable(anon) 키 (이미 넣어둠)

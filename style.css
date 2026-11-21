@@ -95,42 +95,47 @@ textarea{min-height:140px;resize:vertical}
 .pc-img img{position:relative;width:128px;height:128px;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.22))}
 .bigL{position:relative;font-family:"Black Han Sans";font-weight:400;font-size:96px;line-height:1;color:var(--c);
   -webkit-text-stroke:4px #fff;paint-order:stroke fill;text-shadow:0 6px 0 color-mix(in srgb,var(--c) 55%,#000)}
-.pc-f{display:flex;align-items:stretch;gap:8px;padding:10px;background:var(--paper2);border-top:2px dashed color-mix(in srgb,var(--c) 45%,#fff);margin-top:auto}
-.paste{flex:1;display:flex;flex-direction:column;gap:4px;background:#e8f0ff;border-radius:10px;padding:6px 8px}
-.paste>small{font-size:11px;font-weight:700;color:#4a5a90}
-
+/* 당첨권 붙이는 곳 */
+.paste{position:relative;min-height:62px;margin:10px 10px 0;padding:10px 10px 8px;border-radius:10px;background:var(--navy2);
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 24px)}
+.paste.light{background:#e9f0ff;background-image:repeating-linear-gradient(90deg,rgba(40,70,160,.07) 0 1px,transparent 1px 24px)}
+.paste-empty{margin:0;position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:rgba(255,255,255,.35)}
+.paste.light .paste-empty{color:#8a98c4}
+.tixs{display:flex;flex-wrap:wrap;row-gap:8px;padding-right:5px}
+.tix{position:relative;flex:none;display:flex;align-items:baseline;justify-content:center;gap:1px;width:52px;height:34px;margin-right:-5px;padding-top:3px;
+  background:linear-gradient(180deg,#fff 0,#f4f6fb 100%);border:1px solid #c9d2e6;border-left:7px solid var(--c);border-radius:3px;
+  transform:rotate(var(--r,0deg));box-shadow:0 2px 0 rgba(0,0,0,.18),2px 4px 6px rgba(0,0,0,.25)}
+.tix::after{content:"";position:absolute;top:3px;bottom:3px;right:6px;border-right:1.5px dashed #b8c2da}
+.tix b{font-family:"Black Han Sans";font-weight:400;font-size:21px;line-height:1.2;color:var(--c)}
+.tix i{font-style:normal;font-family:"Black Han Sans";font-size:10px;color:var(--c)}
+.tix:hover{z-index:2;transform:rotate(0) translateY(-3px)}
+/* 남은 수량 카운트다운 */
+.cns{display:flex;flex-wrap:wrap;gap:3px;align-items:stretch;margin:8px 10px 10px}
+.cns-l{display:grid;place-items:center;padding:0 6px;font-size:10px;font-weight:800;line-height:1.15;text-align:center;color:#3a2300;background:var(--gold);border-radius:6px}
+.cn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:38px;border-radius:6px;
+  background:#fff6d1;color:#3a2300;box-shadow:inset 0 0 0 1.5px #e9c45a;line-height:1}
+.cn b{font-family:"Black Han Sans";font-weight:400;font-size:17px}
+.cn small{font-size:9px;font-weight:800}
+.cn.now{background:linear-gradient(180deg,#ffe27a,#f7c234);box-shadow:inset 0 0 0 2px #b77d00,0 0 0 2px rgba(247,201,72,.4)}
+.cn.done::after{content:"끝";position:absolute;inset:-2px;display:grid;place-items:center;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#ff6a5e,#d4141a);color:#fff;font-family:"Black Han Sans";font-size:13px;
+  box-shadow:0 1px 3px rgba(0,0,0,.35),inset 0 0 0 2px rgba(255,255,255,.6);transform:rotate(-12deg)}
 /* 하위상 띠 */
 .pop-rows{display:grid;gap:12px;margin-top:14px}
-.pr{position:relative;display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr) auto;align-items:stretch;background:#fff;color:var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 0 0 3px var(--c),0 12px 22px -14px rgba(0,0,0,.7)}
+.pr{position:relative;display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);align-items:stretch;background:#fff;color:var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 0 0 3px var(--c),0 12px 22px -14px rgba(0,0,0,.7)}
 .pr-l{display:flex;align-items:center;gap:10px;padding:10px 26px 10px 12px;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 85%,#fff),var(--c));color:#fff;clip-path:polygon(0 0,100% 0,calc(100% - 16px) 100%,0 100%)}
 .pr-l .nm{font-weight:800;font-size:15px;line-height:1.25;overflow-wrap:anywhere;text-shadow:0 1px 0 rgba(0,0,0,.2)}
 .pr-img{flex:none;width:50px;height:50px;border-radius:12px;display:grid;place-items:center;background:#fff;box-shadow:inset 0 0 0 2px rgba(0,0,0,.06)}
-.pr-img img{width:46px;height:46px;object-fit:contain}.pr-img .bigL{font-size:32px;-webkit-text-stroke:2px #fff;text-shadow:none}
-.pr .strip{display:flex;align-items:center;padding:8px 10px;background:var(--navy2);margin:8px 0;border-radius:10px}
-.pr .cdw{display:flex;align-items:center;padding:8px 10px}
-
-/* 티켓 */
-.stubs{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
-.stub{position:relative;width:28px;height:36px;display:grid;place-items:center;padding-top:5px;border-radius:3px;
-  font-family:"Black Han Sans";font-size:18px;line-height:1;color:var(--c);
-  background:linear-gradient(180deg,var(--c) 0 6px,#fff 6px);box-shadow:0 2px 0 rgba(0,0,0,.25);
-  -webkit-mask:radial-gradient(circle 3px at 0 60%,#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle 3px at 100% 60%,#0000 97%,#000) right/51% 100% no-repeat;
-          mask:radial-gradient(circle 3px at 0 60%,#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle 3px at 100% 60%,#0000 97%,#000) right/51% 100% no-repeat}
-.stub.blank{background:none;box-shadow:none;-webkit-mask:none;mask:none;color:color-mix(in srgb,var(--c) 28%,transparent);outline:1.5px dashed color-mix(in srgb,var(--c) 40%,transparent);outline-offset:-2px}
-.strip .stub.blank{color:rgba(255,255,255,.16);outline-color:rgba(255,255,255,.18)}
-
-/* 남은 장수 태그 */
-.cd{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:66px;padding:6px 8px;border-radius:12px;
-  background:linear-gradient(180deg,#ffe27a,#f7c234);color:#3a2300;box-shadow:inset 0 -3px 0 rgba(120,70,0,.3);line-height:1.1;white-space:nowrap}
-.cd small{font-size:11px;font-weight:800}
-.cd b{font-family:"Black Han Sans";font-weight:400;font-size:30px;line-height:1}
-.cd em{font-style:normal;font-size:11px;font-weight:700;opacity:.75}
+.pr-img img{width:46px;height:46px;object-fit:contain}
+.pr-b{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.pr-b .paste{margin:10px 10px 0 0}.pr-b .cns{margin:8px 10px 10px 0}
 
 /* 종료 스티커 */
 .stamp{position:absolute;z-index:3;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-10deg);
   font-family:"Black Han Sans";font-size:26px;letter-spacing:.06em;color:#fff;background:#d4141a;border:3px solid #fff;border-radius:8px;padding:6px 18px;box-shadow:0 6px 14px rgba(0,0,0,.35)}
-.pc .stamp{top:118px}
+.pc-img .stamp{top:50%}
 .pc.out .pc-img img,.pc.out .bigL,.pr.out .pr-img{filter:grayscale(1) opacity(.45)}
+.pr .stamp{left:auto;right:18px;top:16px;transform:rotate(-10deg)}
 .pc.out .pc-h,.pr.out .pr-l{filter:saturate(.35)}
 
 /* 라스트원 */
@@ -144,11 +149,13 @@ textarea{min-height:140px;resize:vertical}
   .pop-top{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .pc-h{padding:8px;gap:8px}.gl{width:40px;height:40px;border-radius:11px}.gl b{font-size:24px}.pc-h .nm{font-size:13px}
   .pc-img{height:108px}.pc-img img{width:90px;height:90px}.bigL{font-size:64px}
-  .pc-f{flex-direction:column;padding:8px}.pc .cd{flex-direction:row;gap:4px;align-items:baseline}.pc .cd b{font-size:22px}
-  .pc .stamp{top:96px;font-size:20px;padding:4px 12px}
-  .pr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l cd" "s s"}
-  .pr-l{grid-area:l;clip-path:none}.pr .cdw{grid-area:cd;background:var(--c)}.pr .strip{grid-area:s;margin:0;border-radius:0}
-  .stub{width:24px;height:32px;font-size:15px}
+  .stamp{font-size:20px;padding:4px 12px}
+  .paste{margin:8px 8px 0}.cns{margin:6px 8px 8px}
+  .pr{grid-template-columns:minmax(0,1fr)}
+  .pr-l{clip-path:none;padding:8px 10px}
+  .pr-b .paste{margin:8px 8px 0}.pr-b .cns{margin:6px 8px 8px}
+  .tix{width:46px;height:30px;margin-right:-4px}.tix b{font-size:18px}
+  .cn{width:30px;height:34px}.cn b{font-size:15px}
 }
 
 /* ---------- 결과 티켓 뒤집기 ---------- */

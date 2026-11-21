@@ -10,7 +10,7 @@
 </head>
 <body>
 <header class="band"><div class="wrap">
-  <div><h1 id="title">길드 쿠지</h1><p>인증 사진 올리고 한 장씩 뜯어보자</p></div>
+  <div><h1 id="title">길드 쿠지</h1><p>늘어난 GP만큼 한 장씩 뜯어보자</p></div>
   <div class="stat"><div><b id="sRemain">–</b><span>남은 쿠지</span></div><div><b id="sCost">–</b><span>1회 GP</span></div></div>
 </div></header>
 
@@ -37,7 +37,9 @@
         <p class="hint" id="pinHint">처음 뽑을 때 정한 숫자 4자리가 앞으로 내 비밀번호가 돼요.</p>
       </div></div>
       <div class="step"><em>3</em><div>
-        <label for="photo">인증 사진</label>
+        <label for="gp">지금 내 GP (스샷에 보이는 숫자)</label>
+        <input type="number" id="gp" inputmode="numeric" min="0" placeholder="예: 77900">
+        <label for="photo" style="margin-top:12px">GP 인증 스샷</label>
         <label class="drop" id="dropL"><input type="file" id="photo" accept="image/*"><span id="dropT">탭해서 사진 올리기</span></label>
       </div></div>
       <div class="step"><em>4</em><div>
@@ -104,8 +106,13 @@ function renderMine() {
   const m = me(), cost = S?.cost || 0, cnt = $('count');
   let max = 0, msg = '';
   if (m) {
-    max = cost ? Math.min(Math.floor(m.points / cost), remain(), 50) : 0;
-    $('myPts').innerHTML = `<span>보유 <b>${m.points.toLocaleString()}</b> GP</span><span>뽑기 가능 <b>${max}</b>회</span>`;
+    const typed = $('gp').value === '' ? null : parseInt($('gp').value, 10);
+    const gp = typed ?? m.last_gp;
+    const avail = Math.max(0, gp - m.base_gp - m.used_gp);
+    max = cost ? Math.min(Math.floor(avail / cost), remain(), 50) : 0;
+    if (typed !== null && typed < m.last_gp) { msg = `전에 인증한 GP(${m.last_gp.toLocaleString()})보다 작아요`; max = 0; }
+    $('myPts').innerHTML = `<span>기준 <b>${m.base_gp.toLocaleString()}</b></span><span>최근 인증 <b>${m.last_gp.toLocaleString()}</b></span><span>사용 <b>${m.used_gp.toLocaleString()}</b></span>`
+      + `<span>${typed === null ? '지금 GP를 입력하면 계산돼요' : `늘어난 GP 중 남은 <b>${avail.toLocaleString()}</b> → 뽑기 <b>${max}</b>회`}</span>`;
     $('pinLabel').textContent = m.has_pin ? '비밀번호 4자리' : '처음이야! 앞으로 쓸 비밀번호 4자리 정하기';
     $('pinHint').textContent = m.has_pin ? '처음 뽑을 때 정한 숫자예요. 잊었으면 관리자에게 초기화 요청!' : '이 숫자를 기억해 둬요. 다음부터 이걸로 뽑아요.';
   } else $('myPts').innerHTML = '';
@@ -114,13 +121,13 @@ function renderMine() {
   cnt.innerHTML = max ? Array.from({length: max}, (_, i) => `<option value="${i + 1}">${i + 1}장 (${((i + 1) * cost).toLocaleString()} GP)</option>`).join('') : '<option value="">—</option>';
   if (max) cnt.value = String(Math.min(keep, max));
   if (!busy) $('drawErr').textContent = msg;
-  $('drawBtn').disabled = busy || !m || !max || !photoFile || !/^\d{4}$/.test($('pin').value) || !!msg;
+  $('drawBtn').disabled = busy || !m || !max || !photoFile || !/^\d{4}$/.test($('pin').value) || $('gp').value === '' || !!msg;
 }
 
 function renderFeed() {
   $('feed').innerHTML = draws.length ? draws.map(d => `<div class="fr">
     <img src="${esc(photoUrl(d.photo))}" alt="${esc(d.name)} 인증 사진" data-full="${esc(photoUrl(d.photo))}" loading="lazy">
-    <div><b>${esc(d.name)}</b> <time>${fmtTime(d.created_at)}</time>
+    <div><b>${esc(d.name)}</b> <time>${fmtTime(d.created_at)}${d.reported_gp != null ? ` · 인증 ${d.reported_gp.toLocaleString()} GP` : ''}</time>
     <div class="chips">${(d.results || []).map(r => `<span class="chip" style="background:${esc(r.color)}">${esc(r.grade)} ${esc(r.name)}</span>`).join('')}</div></div></div>`).join('')
     : '<div class="empty">아직 뽑은 사람이 없어요</div>';
 }
@@ -129,7 +136,7 @@ async function load() {
   const [a, b, c, d] = await Promise.all([
     sb.from('settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('prizes').select('*').order('sort').order('id'),
-    sb.from('members').select('id,name,points,has_pin'),
+    sb.from('members').select('id,name,base_gp,last_gp,used_gp,has_pin'),
     sb.from('draws').select('*').order('created_at', {ascending: false}).limit(40)
   ]);
   const err = a.error || b.error || c.error || d.error;
@@ -161,12 +168,12 @@ async function doDraw() {
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
     const up = await sb.storage.from('proofs').upload(path, blob, {contentType: blob.type || 'image/jpeg'});
     if (up.error) throw new Error('사진 업로드 실패: ' + errMsg(up.error));
-    const {data, error} = await sb.rpc('draw_kuji', {p_member: m.id, p_pin: pin, p_count: n, p_photo: path});
+    const {data, error} = await sb.rpc('draw_kuji', {p_member: m.id, p_pin: pin, p_count: n, p_photo: path, p_gp: parseInt($('gp').value, 10)});
     if (error) throw error;
     try { localStorage.setItem('kuji-who', m.id); } catch (e) {}
     showTickets(data.results);
     if (data.count < n) toast(`${data.count}장만 뽑혔어요 (남은 수량 부족)`);
-    photoFile = null; $('photo').value = ''; $('dropT').textContent = '탭해서 사진 올리기'; $('dropL').querySelector('img')?.remove();
+    photoFile = null; $('photo').value = ''; $('gp').value = ''; $('dropT').textContent = '탭해서 사진 올리기'; $('dropL').querySelector('img')?.remove();
     await load();
   } catch (e) {
     $('drawErr').textContent = errMsg(e);
@@ -184,6 +191,7 @@ function showTickets(rs) {
 
 $('who').addEventListener('change', () => { renderMine(); try { localStorage.setItem('kuji-who', $('who').value); } catch (e) {} });
 $('count').addEventListener('change', renderMine);
+$('gp').addEventListener('input', renderMine);
 $('pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); renderMine(); });
 $('photo').addEventListener('change', e => {
   photoFile = e.target.files[0] || null;

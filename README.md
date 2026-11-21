@@ -13,6 +13,8 @@
 2. 만들어지면 왼쪽 **SQL Editor** → `setup.sql` 내용 통째로 붙여넣기
 3. 맨 아래 `YOUR_EMAIL@example.com` 을 **관리자로 쓸 내 이메일**로 바꾸고 **Run**
 
+> 11/22 이전에 setup.sql 을 이미 실행했다면 `migration.sql` 만 한 번 더 Run.
+
 ### 2. 관리자 계정 만들기
 1. 왼쪽 **Authentication → Users → Add user → Create new user**
 2. 위에서 적은 이메일 + 비밀번호 입력, **Auto Confirm User** 체크
@@ -28,7 +30,8 @@
 저장소 **Settings → Pages → Source: Deploy from a branch → main / (root)** → Save
 
 ## 운영
-- **GP 갱신**: 관리자 → GP 일괄 입력에 `닉네임 GP` 줄로 붙여넣기 (있는 닉은 덮어씀)
+- **새 이벤트 시작**: 관리자 → 기준 GP 일괄 입력에 `닉네임 GP` 줄로 붙여넣기 (그 닉의 사용 GP도 0으로)
+- **GP 인증 확인**: 최근 결과에 스샷 + 입력한 GP가 같이 뜸. 다르면 관리자에서 최근 인증 GP 수정
 - **상품**: 등급 추가 → 상품명/수량 → 상품 저장
 - **비밀번호 잊은 길드원**: 길드원 목록에서 `초기화` → 다음 뽑기 때 새로 정함
 - **판 새로 시작**: 판 초기화 (남은 수량 원복, 라스트원 당첨 해제, GP는 그대로)

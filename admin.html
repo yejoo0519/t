@@ -32,14 +32,14 @@
       <div class="card">
         <h3>기본 설정</h3>
         <label for="aTitle">쿠지 이름</label><input type="text" id="aTitle">
-        <label for="aCost" style="margin-top:12px">1회당 차감 GP</label><input type="number" id="aCost" min="1">
+        <label for="aCost" style="margin-top:12px">1회당 필요 GP (늘어난 GP 기준)</label><input type="number" id="aCost" min="1">
         <label for="aLast" style="margin-top:12px">라스트원 상품 (비우면 없음)</label><input type="text" id="aLast">
         <p class="hint" id="lastInfo"></p>
         <button class="btn" id="saveCfg" style="margin-top:12px">설정 저장</button>
       </div>
       <div class="card">
-        <h3>GP 일괄 입력</h3>
-        <p class="hint" style="margin-top:0">한 줄에 <b>닉네임 GP</b>. 이미 있는 닉네임은 GP가 덮어써지고, 없으면 새로 추가돼요.</p>
+        <h3>기준 GP 일괄 입력 (새 이벤트 시작)</h3>
+        <p class="hint" style="margin-top:0">한 줄에 <b>닉네임 GP</b>. 여기 넣은 GP가 출발선이 되고, 그 닉네임의 최근 인증·사용 GP는 0부터 다시 시작해요. 없는 닉네임은 새로 추가돼요.</p>
         <textarea id="bulk" placeholder="Genesis.Kyung 133518&#10;GENESIS.피올 84129"></textarea>
         <button class="btn" id="importBtn" style="margin-top:10px">불러오기</button>
       </div>
@@ -54,12 +54,12 @@
           <button class="btn" id="savePrizes">상품 저장</button>
           <button class="btn ghost" id="resetBtn">판 초기화</button>
         </div>
-        <p class="hint">총 수량을 바꾸면 남은 수량도 같은 만큼 늘거나 줄어요. 판 초기화는 남은 수량을 총 수량으로 되돌리고 라스트원 당첨을 지워요 (GP는 안 돌려줌).</p>
+        <p class="hint">총 수량을 바꾸면 남은 수량도 같은 만큼 늘거나 줄어요. 판 초기화는 남은 수량을 총 수량으로 되돌리고 라스트원 당첨을 지워요 (사용 GP는 그대로).</p>
       </div>
       <div class="card">
         <h3>길드원 <span class="hint" id="mCount"></span></h3>
-        <div class="scroll"><table><thead><tr><th>닉네임</th><th>GP</th><th>비번</th><th></th></tr></thead><tbody id="mEdit"></tbody></table></div>
-        <p class="hint">GP 칸을 고치고 칸 밖을 누르면 바로 저장돼요.</p>
+        <div class="scroll"><table><thead><tr><th>닉네임</th><th>기준</th><th>최근 인증</th><th>사용</th><th>남음</th><th>비번</th><th></th></tr></thead><tbody id="mEdit"></tbody></table></div>
+        <p class="hint">기준·최근 인증 칸을 고치고 칸 밖을 누르면 바로 저장돼요. 남음 = 최근 인증 − 기준 − 사용.</p>
       </div>
     </div>
   </div>
@@ -87,7 +87,7 @@ async function load() {
   const [a, b, c] = await Promise.all([
     sb.from('settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('prizes').select('*').order('sort').order('id'),
-    sb.from('members').select('id,name,points,has_pin').order('points', {ascending: false})
+    sb.from('members').select('id,name,base_gp,last_gp,used_gp,has_pin').order('base_gp', {ascending: false})
   ]);
   if (a.error || b.error || c.error) { toast('불러오기 실패: ' + errMsg(a.error || b.error || c.error)); return; }
   S = a.data; prizes = b.data; members = c.data;
@@ -110,7 +110,10 @@ function drawPrizes() {
 function drawMembers() {
   $('mCount').textContent = `${members.length}명`;
   $('mEdit').innerHTML = members.map(m => `<tr data-id="${esc(m.id)}"><td>${esc(m.name)}</td>
-    <td><input type="number" class="mp" value="${m.points}" style="width:110px" aria-label="${esc(m.name)} GP"></td>
+    <td><input type="number" class="mp" data-k="base_gp" value="${m.base_gp}" style="width:100px" aria-label="${esc(m.name)} 기준 GP"></td>
+    <td><input type="number" class="mp" data-k="last_gp" value="${m.last_gp}" style="width:100px" aria-label="${esc(m.name)} 최근 인증 GP"></td>
+    <td class="n">${m.used_gp.toLocaleString()}</td>
+    <td class="n"><b>${Math.max(0, m.last_gp - m.base_gp - m.used_gp).toLocaleString()}</b></td>
     <td>${m.has_pin ? '<button class="x pin">초기화</button>' : '<span class="hint">없음</span>'}</td>
     <td><button class="x del" aria-label="${esc(m.name)} 삭제">✕</button></td></tr>`).join('');
 }
@@ -135,7 +138,7 @@ $('importBtn').addEventListener('click', async () => {
   const rows = [], bad = [];
   for (const l of $('bulk').value.split('\n').map(s => s.trim()).filter(Boolean)) {
     const m = l.match(/^(.+?)[\s,\t]+(-?[\d,]+)\s*(GP)?$/i);
-    if (m) rows.push({name: m[1].trim(), points: parseInt(m[2].replace(/,/g, ''), 10)}); else bad.push(l);
+    if (m) { const g = parseInt(m[2].replace(/,/g, ''), 10); rows.push({name: m[1].trim(), base_gp: g, last_gp: g, used_gp: 0}); } else bad.push(l);
   }
   if (!rows.length) { toast('형식이 맞는 줄이 없어요'); return; }
   if (await run(sb.from('members').upsert(rows, {onConflict: 'name'}), `${rows.length}명 반영${bad.length ? `, ${bad.length}줄 형식 오류` : ''}`)) { $('bulk').value = bad.join('\n'); load(); }
@@ -144,7 +147,7 @@ $('importBtn').addEventListener('click', async () => {
 $('mEdit').addEventListener('change', async e => {
   if (!e.target.classList.contains('mp')) return;
   const id = e.target.closest('tr').dataset.id;
-  await run(sb.from('members').update({points: parseInt(e.target.value, 10) || 0}).eq('id', id), 'GP 수정');
+  if (await run(sb.from('members').update({[e.target.dataset.k]: parseInt(e.target.value, 10) || 0}).eq('id', id), 'GP 수정')) load();
 });
 $('mEdit').addEventListener('click', async e => {
   const tr = e.target.closest('tr'); if (!tr) return; const id = tr.dataset.id, b = e.target.closest('button'); if (!b) return;

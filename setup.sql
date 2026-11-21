@@ -24,6 +24,7 @@ create table if not exists public.prizes (
   total int not null default 1 check (total >= 0),
   remaining int not null default 1 check (remaining >= 0),
   color text not null default '#e2312f',
+  image text,
   sort int not null default 0
 );
 
@@ -153,7 +154,7 @@ begin
       r := r - p.remaining;
       if r < 0 then
         update public.prizes set remaining = remaining - 1 where id = p.id;
-        results := results || jsonb_build_object('grade', p.grade, 'name', p.name, 'color', p.color);
+        results := results || jsonb_build_object('grade', p.grade, 'name', p.name, 'color', p.color, 'image', p.image);
         exit;
       end if;
     end loop;

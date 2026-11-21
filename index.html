@@ -71,7 +71,7 @@
 <script src="common.js"></script>
 <script>
 {
-const {sb, ready, $, esc, badge, photoUrl, toast, errMsg, fmtTime} = K;
+const {sb, ready, $, esc, badge, art, photoUrl, toast, errMsg, fmtTime} = K;
 let S = null, prizes = [], members = [], draws = [], photoFile = null, busy = false;
 
 const remain = () => prizes.reduce((a, p) => a + p.remaining, 0);
@@ -83,7 +83,7 @@ function renderBoard() {
   $('sCost').textContent = S ? S.cost.toLocaleString() : '–';
   const tot = prizes.reduce((a, p) => a + p.total, 0);
   $('sRemain').textContent = prizes.length ? `${remain()} / ${tot}` : '–';
-  $('board').innerHTML = prizes.length ? prizes.map(p => `<div class="prize ${p.remaining ? '' : 'out'}">${badge(p.grade, p.color)}
+  $('board').innerHTML = prizes.length ? prizes.map(p => `<div class="prize ${p.remaining ? '' : 'out'}">${art(p.grade, p.color, p.image)}
     <div><div class="nm">${esc(p.name)}</div><div class="bar"><i style="width:${p.total ? p.remaining / p.total * 100 : 0}%;background:${esc(p.color)}"></i></div></div>
     <div class="cnt"><b>${p.remaining}</b><small> / ${p.total}</small></div></div>`).join('')
     : '<div class="empty">아직 상품이 세팅되지 않았어요</div>';
@@ -124,7 +124,7 @@ function renderFeed() {
   $('feed').innerHTML = draws.length ? draws.map(d => `<div class="fr">
     <img src="${esc(photoUrl(d.photo))}" alt="${esc(d.name)} 인증 사진" data-full="${esc(photoUrl(d.photo))}" loading="lazy">
     <div><b>${esc(d.name)}</b> <time>${fmtTime(d.created_at)}${d.reported_gp != null ? ` · 인증 ${d.reported_gp.toLocaleString()} GP` : ''}</time>
-    <div class="chips">${(d.results || []).map(r => `<span class="chip" style="background:${esc(r.color)}">${esc(r.grade)} ${esc(r.name)}</span>`).join('')}</div></div></div>`).join('')
+    <div class="chips">${(d.results || []).map(r => `<span class="chip" style="background:${esc(r.color)}">${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}${esc(r.grade)} ${esc(r.name)}</span>`).join('')}</div></div></div>`).join('')
     : '<div class="empty">아직 뽑은 사람이 없어요</div>';
 }
 
@@ -183,7 +183,7 @@ async function doDraw() {
 function showTickets(rs) {
   $('resultBox').hidden = false;
   $('tickets').innerHTML = rs.map((r, i) => `<button class="tk" aria-label="${i + 1}번 티켓 열기"><div class="in">
-    <div class="f">${r.last ? 'LAST' : '뜯기'}</div><div class="b">${badge(r.grade, r.color)}<small>${esc(r.name)}</small></div></div></button>`).join('');
+    <div class="f">${r.last ? 'LAST' : '뜯기'}</div><div class="b">${art(r.grade, r.color, r.image)}<small>${esc(r.name)}</small></div></div></button>`).join('');
   $('resultBox').scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 

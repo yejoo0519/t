@@ -14,6 +14,7 @@ alter table public.members add column if not exists last_gp int not null default
 alter table public.members add column if not exists used_gp int not null default 0;
 update public.members set last_gp = base_gp where last_gp < base_gp;
 alter table public.draws add column if not exists reported_gp int;
+alter table public.prizes add column if not exists image text;
 
 -- ---------- 뽑기 (서버에서 처리: 확률/포인트 조작 불가) ----------
 -- ---------- 뽑기 (서버에서 처리: 확률/GP 계산 조작 불가) ----------
@@ -76,7 +77,7 @@ begin
       r := r - p.remaining;
       if r < 0 then
         update public.prizes set remaining = remaining - 1 where id = p.id;
-        results := results || jsonb_build_object('grade', p.grade, 'name', p.name, 'color', p.color);
+        results := results || jsonb_build_object('grade', p.grade, 'name', p.name, 'color', p.color, 'image', p.image);
         exit;
       end if;
     end loop;

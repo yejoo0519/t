@@ -48,7 +48,7 @@
     <div class="agrid">
       <div class="card">
         <h3>상품 구성</h3>
-        <div class="scroll"><table><thead><tr><th>등급</th><th>상품명</th><th>총</th><th>남음</th><th>색</th><th></th></tr></thead><tbody id="pEdit"></tbody></table></div>
+        <div class="scroll"><table><thead><tr><th>등급</th><th>상품명 (드래곤 이름이면 이미지 자동)</th><th>총</th><th>남음</th><th>색</th><th></th></tr></thead><tbody id="pEdit"></tbody></table></div>
         <div class="row-btns">
           <button class="btn ghost" id="addPrize">+ 등급 추가</button>
           <button class="btn" id="savePrizes">상품 저장</button>
@@ -65,13 +65,14 @@
   </div>
 </div></main>
 <div class="toast" id="toast" hidden></div>
+<datalist id="dragonList"></datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 {
-const {sb, ready, $, esc, COLORS, toast, errMsg} = K;
+const {sb, ready, $, esc, COLORS, art, toast, errMsg, loadDragons, findDragon} = K;
 let S = null, prizes = [], members = [], edit = [];
 
 async function check() {
@@ -97,10 +98,14 @@ async function load() {
   drawPrizes(); drawMembers();
 }
 
+function pv(name) {
+  const d = findDragon(name);
+  return d ? `${art('', '', d.url)}<span>${esc(d.name)}</span>` : (name ? '<span>드래곤 아님 → 등급 배지</span>' : '');
+}
 function drawPrizes() {
   $('pEdit').innerHTML = edit.length ? edit.map((p, i) => `<tr data-i="${i}">
     <td><input type="text" data-k="grade" value="${esc(p.grade)}" style="width:76px" aria-label="등급"></td>
-    <td><input type="text" data-k="name" value="${esc(p.name)}" aria-label="상품명"></td>
+    <td><input type="text" data-k="name" value="${esc(p.name)}" list="dragonList" aria-label="상품명"><div class="pv">${pv(p.name)}</div></td>
     <td><input type="number" data-k="total" value="${p.total}" min="0" style="width:72px" aria-label="총 수량"></td>
     <td class="n">${p.id ? p.remaining : '–'}</td>
     <td><input type="color" data-k="color" value="${esc(p.color)}" aria-label="색" style="width:44px;height:40px;border:0;background:none"></td>
@@ -161,7 +166,12 @@ $('mEdit').addEventListener('click', async e => {
   }
 });
 
-$('pEdit').addEventListener('input', e => { const k = e.target.dataset.k; if (!k) return; const p = edit[+e.target.closest('tr').dataset.i]; p[k] = k === 'total' ? Math.max(0, parseInt(e.target.value, 10) || 0) : e.target.value; });
+$('pEdit').addEventListener('input', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  const p = edit[+e.target.closest('tr').dataset.i];
+  p[k] = k === 'total' ? Math.max(0, parseInt(e.target.value, 10) || 0) : e.target.value;
+  if (k === 'name') e.target.parentElement.querySelector('.pv').innerHTML = pv(p.name);
+});
 $('pEdit').addEventListener('click', e => { if (e.target.closest('.pdel')) { edit.splice(+e.target.closest('tr').dataset.i, 1); drawPrizes(); } });
 $('addPrize').addEventListener('click', () => { const L = 'ABCDEFGHIJ'; edit.push({grade: (L[edit.length] || '?') + '상', name: '', total: 1, color: COLORS[edit.length % COLORS.length]}); drawPrizes(); });
 
@@ -171,8 +181,8 @@ $('savePrizes').addEventListener('click', async () => {
   const gone = prizes.filter(p => !keep.some(k => k.id === p.id)).map(p => p.id);
   if (gone.length && !await run(sb.from('prizes').delete().in('id', gone))) return;
   const ups = keep.filter(p => p.id).map((p, i) => { const o = old[p.id]; return {id: p.id, grade: p.grade.trim(), name: p.name.trim(), total: p.total, color: p.color, sort: keep.indexOf(p),
-    remaining: Math.max(0, Math.min(p.total, o.remaining + p.total - o.total))}; });
-  const news = keep.filter(p => !p.id).map(p => ({grade: p.grade.trim(), name: p.name.trim(), total: p.total, remaining: p.total, color: p.color, sort: keep.indexOf(p)}));
+    remaining: Math.max(0, Math.min(p.total, o.remaining + p.total - o.total)), image: findDragon(p.name)?.url || null}; });
+  const news = keep.filter(p => !p.id).map(p => ({grade: p.grade.trim(), name: p.name.trim(), total: p.total, remaining: p.total, color: p.color, image: findDragon(p.name)?.url || null, sort: keep.indexOf(p)}));
   if (ups.length && !await run(sb.from('prizes').upsert(ups))) return;
   if (news.length && !await run(sb.from('prizes').insert(news))) return;
   toast('상품 저장'); load();
@@ -184,6 +194,10 @@ $('resetBtn').addEventListener('click', async e => {
   if (await run(sb.from('settings').update({last_one_winner: null, last_one_winner_name: null}).eq('id', 1), '판을 초기화했어요')) load();
 });
 
+loadDragons().then(d => {
+  $('dragonList').innerHTML = d.arr.map(x => `<option value="${esc(x[1])}">`).join('');
+  if (edit.length) drawPrizes();
+});
 if (!ready) $('setupNote').hidden = false; else check();
 }
 </script>

@@ -134,33 +134,31 @@ end $$;
 revoke all on function public.shuffle_board() from public, anon;
 grant execute on function public.shuffle_board() to authenticated;
 
--- ---------- 뽑기 (서버에서 처리: 확률/GP 계산 조작 불가) ----------
--- 안 뜯은 티켓 중에서 무작위로, 늘어난 GP로 되는 만큼만 뽑음
--- 뽑기 가능 GP = 지금 인증한 GP - 기준 GP - 이미 쓴 GP
+-- ---------- 뽑기권 (GP 인증 → 뽑기권 → 판에서 직접 골라 뽑기) ----------
+alter table public.members add column if not exists credits int not null default 0;
+
 drop function if exists public.draw_kuji(uuid, text, int, text);
+drop function if exists public.draw_kuji(uuid, text, int, text, int);
 drop function if exists public.draw_kuji(uuid, text, int[], text, int);
-create or replace function public.draw_kuji(p_member uuid, p_pin text, p_count int, p_photo text, p_gp int)
+
+-- 1) GP 인증: 스샷에서 읽은 GP로 뽑기권 지급 (서버 함수 kuji-draw 만 호출 가능)
+--    지급 장수 = (인증 GP - 기준 GP - 이미 쓴 GP) ÷ 1장 GP, 남은 쿠지 수까지만
+create or replace function public.grant_credits(p_member uuid, p_pin text, p_photo text, p_gp int)
 returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare
   s public.settings;
   m public.members;
-  sl public.slots;
-  pr public.prizes;
   v_hash text;
-  k int := 0;
-  can int;
   avail int;
-  results jsonb := '[]'::jsonb;
+  add int;
+  unopened int;
 begin
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then
     raise exception '비밀번호는 숫자 4자리로 입력해 주세요';
   end if;
   if p_gp is null or p_gp < 0 then
     raise exception 'GP를 읽지 못했어요';
-  end if;
-  if p_count is null or p_count < 1 or p_count > 50 then
-    raise exception '1~50장 사이로 골라 주세요';
   end if;
   if p_photo is null or not exists (select 1 from storage.objects where bucket_id = 'proofs' and name = p_photo) then
     raise exception '인증 사진이 업로드되지 않았어요';
@@ -169,7 +167,6 @@ begin
     raise exception '이미 사용한 사진이에요';
   end if;
 
-  -- 이 줄이 동시 뽑기를 한 줄로 세워줌
   select * into s from public.settings where id = 1 for update;
   select * into m from public.members where id = p_member for update;
   if not found then raise exception '길드원을 찾을 수 없어요'; end if;
@@ -186,43 +183,95 @@ begin
     raise exception '전에 인증한 GP(%)보다 작아요. 최신 스샷인지 확인해 주세요', m.last_gp;
   end if;
 
-  avail := p_gp - m.base_gp - m.used_gp;
-  can := greatest(avail, 0) / s.cost;
-  if can < 1 then
-    raise exception '늘어난 GP가 부족해요 (사용 가능 GP: %, 1칸에 %)', greatest(avail, 0), s.cost;
-  end if;
-
-  if not exists (select 1 from public.slots where not opened) then
+  avail := greatest(p_gp - m.base_gp - m.used_gp, 0);
+  select count(*) into unopened from public.slots where not opened;
+  add := least(avail / s.cost, greatest(unopened - m.credits, 0));
+  if unopened = 0 then
     raise exception '쿠지가 전부 소진됐어요';
   end if;
+  if add < 1 then
+    raise exception '늘어난 GP가 부족해요 (사용 가능 GP: %, 1장에 %)', avail, s.cost;
+  end if;
 
-  for sl in select * from public.slots where not opened order by random() limit least(p_count, can) for update loop
+  update public.members
+     set last_gp = p_gp, used_gp = used_gp + add * s.cost, credits = credits + add
+   where id = p_member;
+  insert into public.draws (member_id, name, photo, reported_gp, results, count, spent)
+    values (p_member, m.name, p_photo, p_gp, '[]'::jsonb, add, add * s.cost);
+
+  return jsonb_build_object('granted', add, 'credits', m.credits + add, 'gp', p_gp,
+                            'gained', p_gp - m.base_gp, 'carry', avail - add * s.cost);
+end $$;
+revoke all on function public.grant_credits(uuid, text, text, int) from public, anon, authenticated;
+grant execute on function public.grant_credits(uuid, text, text, int) to service_role;
+
+-- 2) 쿠지 고르기: 판에서 고른 칸을 뽑기권으로 뜯음 (브라우저에서 바로 호출, 비밀번호 필요)
+create or replace function public.pick_slots(p_member uuid, p_pin text, p_slots int[])
+returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  s public.settings;
+  m public.members;
+  sl public.slots;
+  pr public.prizes;
+  v_hash text;
+  v_no int;
+  k int := 0;
+  v_results jsonb := '[]'::jsonb;
+  last_draw uuid;
+begin
+  if p_slots is null or cardinality(p_slots) = 0 then
+    raise exception '뽑을 쿠지를 골라 주세요';
+  end if;
+  if cardinality(p_slots) <> (select count(distinct x) from unnest(p_slots) x) then
+    raise exception '같은 쿠지를 두 번 고를 수 없어요';
+  end if;
+
+  select * into s from public.settings where id = 1 for update;
+  select * into m from public.members where id = p_member for update;
+  if not found then raise exception '길드원을 찾을 수 없어요'; end if;
+
+  select pin_hash into v_hash from public.member_pins where member_id = p_member;
+  if v_hash is null or v_hash <> crypt(coalesce(p_pin, ''), v_hash) then
+    raise exception '비밀번호가 틀렸어요';
+  end if;
+  if m.credits < cardinality(p_slots) then
+    raise exception '뽑기권이 %장 남았어요', m.credits;
+  end if;
+
+  foreach v_no in array p_slots loop
+    select * into sl from public.slots where no = v_no for update;
+    if not found then raise exception '없는 쿠지예요'; end if;
+    if sl.opened then raise exception '방금 다른 사람이 그 쿠지를 가져갔어요. 다시 골라 주세요'; end if;
     select * into pr from public.prizes where id = sl.prize_id;
     update public.slots
-      set opened = true, opened_by = p_member, opened_name = m.name, opened_at = now(),
-          grade = pr.grade, name = pr.name, color = pr.color, image = pr.image
-      where no = sl.no;
+       set opened = true, opened_by = p_member, opened_name = m.name, opened_at = now(),
+           grade = pr.grade, name = pr.name, color = pr.color, image = pr.image
+     where no = v_no;
     update public.prizes set remaining = remaining - 1 where id = pr.id;
-    results := results || jsonb_build_object('no', sl.no, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
+    v_results := v_results || jsonb_build_object('no', v_no, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
     k := k + 1;
   end loop;
 
   if s.last_one_name <> '' and s.last_one_winner is null
      and not exists (select 1 from public.slots where not opened) then
     update public.settings set last_one_winner = p_member, last_one_winner_name = m.name where id = 1;
-    results := results || jsonb_build_object('grade', '라스트원', 'name', s.last_one_name, 'color', '#1b1416', 'last', true);
+    v_results := v_results || jsonb_build_object('grade', '라스트원', 'name', s.last_one_name, 'color', '#1b1416', 'last', true);
   end if;
 
-  update public.members set last_gp = p_gp, used_gp = used_gp + k * s.cost where id = p_member;
-  insert into public.draws (member_id, name, photo, reported_gp, results, count, spent)
-    values (p_member, m.name, p_photo, p_gp, results, k, k * s.cost);
+  update public.members set credits = credits - k where id = p_member;
 
-  return jsonb_build_object('results', results, 'count', k, 'spent', k * s.cost);
+  select id into last_draw from public.draws where member_id = p_member order by created_at desc limit 1;
+  if last_draw is not null then
+    update public.draws set results = draws.results || v_results
+     where id = last_draw;
+  end if;
+
+  return jsonb_build_object('results', v_results, 'credits', m.credits - k);
 end $$;
+revoke all on function public.pick_slots(uuid, text, int[]) from public;
+grant execute on function public.pick_slots(uuid, text, int[]) to anon, authenticated;
 
--- 뽑기는 서버 함수(kuji-draw)만 호출 가능
-revoke all on function public.draw_kuji(uuid, text, int, text, int) from public, anon, authenticated;
-grant execute on function public.draw_kuji(uuid, text, int, text, int) to service_role;
 
 -- AI 호출 전에 비밀번호부터 확인 (비번 없으면 true = 첫 뽑기)
 create or replace function public.verify_pin(p_member uuid, p_pin text)

@@ -59,8 +59,8 @@
       </div>
       <div class="card">
         <h3>길드원 <span class="hint" id="mCount"></span></h3>
-        <div class="scroll"><table><thead><tr><th>닉네임</th><th>기준</th><th>최근 인증</th><th>사용</th><th>남음</th><th>비번</th><th></th></tr></thead><tbody id="mEdit"></tbody></table></div>
-        <p class="hint">기준·최근 인증 칸을 고치고 칸 밖을 누르면 바로 저장돼요. 남음 = 최근 인증 − 기준 − 사용.</p>
+        <div class="scroll"><table><thead><tr><th>닉네임</th><th>기준</th><th>최근 인증</th><th>사용</th><th>남음</th><th>뽑기권</th><th>비번</th><th></th></tr></thead><tbody id="mEdit"></tbody></table></div>
+        <p class="hint">기준·최근 인증 칸을 고치고 칸 밖을 누르면 바로 저장돼요. 남음 = 최근 인증 − 기준 − 사용 (뽑기권으로 바뀐 GP는 사용에 포함). 뽑기권은 받았지만 아직 안 쓴 장수.</p>
       </div>
     </div>
   </div>
@@ -89,7 +89,7 @@ async function load() {
   const [a, b, c] = await Promise.all([
     sb.from('settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('prizes').select('*').order('sort').order('id'),
-    sb.from('members').select('id,name,base_gp,last_gp,used_gp,has_pin').order('base_gp', {ascending: false})
+    sb.from('members').select('id,name,base_gp,last_gp,used_gp,credits,has_pin').order('base_gp', {ascending: false})
   ]);
   if (a.error || b.error || c.error) { toast('불러오기 실패: ' + errMsg(a.error || b.error || c.error)); return; }
   S = a.data; prizes = b.data; members = c.data;
@@ -123,6 +123,7 @@ function drawMembers() {
     <td><input type="number" class="mp" data-k="last_gp" value="${m.last_gp}" style="width:100px" aria-label="${esc(m.name)} 최근 인증 GP"></td>
     <td class="n">${m.used_gp.toLocaleString()}</td>
     <td class="n"><b>${Math.max(0, m.last_gp - m.base_gp - m.used_gp).toLocaleString()}</b></td>
+    <td><input type="number" class="mp" data-k="credits" value="${m.credits}" min="0" style="width:70px" aria-label="${esc(m.name)} 뽑기권"></td>
     <td>${m.has_pin ? '<button class="x pin">초기화</button>' : '<span class="hint">없음</span>'}</td>
     <td><button class="x del" aria-label="${esc(m.name)} 삭제">✕</button></td></tr>`).join('');
 }
@@ -147,7 +148,7 @@ $('importBtn').addEventListener('click', async () => {
   const rows = [], bad = [];
   for (const l of $('bulk').value.split('\n').map(s => s.trim()).filter(Boolean)) {
     const m = l.match(/^(.+?)[\s,\t]+(-?[\d,]+)\s*(GP)?$/i);
-    if (m) { const g = parseInt(m[2].replace(/,/g, ''), 10); rows.push({name: m[1].trim(), base_gp: g, last_gp: g, used_gp: 0}); } else bad.push(l);
+    if (m) { const g = parseInt(m[2].replace(/,/g, ''), 10); rows.push({name: m[1].trim(), base_gp: g, last_gp: g, used_gp: 0, credits: 0}); } else bad.push(l);
   }
   if (!rows.length) { toast('형식이 맞는 줄이 없어요'); return; }
   if (await run(sb.from('members').upsert(rows, {onConflict: 'name'}), `${rows.length}명 반영${bad.length ? `, ${bad.length}줄 형식 오류` : ''}`)) { $('bulk').value = bad.join('\n'); load(); }

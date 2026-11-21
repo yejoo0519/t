@@ -1,5 +1,6 @@
 // 길드 쿠지 뽑기 서버 함수
-// 1) 비밀번호 확인  2) 업로드된 스샷을 Claude로 읽어 내 닉네임 줄의 GP 찾기  3) DB에서 뽑기
+// 1) 비밀번호 확인  2) 업로드된 스샷을 Claude로 읽어 내 닉네임 줄의 GP 찾기  3) 늘어난 GP만큼 뽑기권 지급
+// (실제 뽑기는 사이트에서 쿠지판을 골라 pick_slots 로)
 // 필요한 Secret: ANTHROPIC_API_KEY  (선택: CLAUDE_MODEL, 기본 claude-sonnet-5-5)
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
@@ -84,10 +85,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return fail("POST만 돼요");
 
-  let body: { member?: string; pin?: string; count?: number; photo?: string };
+  let body: { member?: string; pin?: string; photo?: string };
   try { body = await req.json(); } catch { return fail("잘못된 요청이에요"); }
   const { member, pin, photo } = body;
-  const count = Math.max(1, Math.min(50, Math.floor(Number(body.count)) || 1));
   if (!member || !photo || typeof pin !== "string" || !/^\d{4}$/.test(pin)) return fail("닉네임·비밀번호·사진을 확인해 주세요");
 
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -114,8 +114,8 @@ Deno.serve(async (req) => {
     return fail(`스샷에서 「${m.name}」 줄을 못 찾았어요. 내 닉네임과 GP가 보이게 찍어 주세요`);
   }
 
-  const { data, error } = await sb.rpc("draw_kuji", {
-    p_member: member, p_pin: pin, p_count: count, p_photo: photo, p_gp: read.gp,
+  const { data, error } = await sb.rpc("grant_credits", {
+    p_member: member, p_pin: pin, p_photo: photo, p_gp: read.gp,
   });
   if (error) { await drop(); return fail(error.message, { gp: read.gp }); }
   return reply({ ok: true, gp: read.gp, ...data });

@@ -55,7 +55,7 @@
           <button class="btn ghost" id="resetBtn">같은 상품으로 다시 섞기</button>
         </div>
         <p class="hint" id="boardInfo"></p>
-        <p class="hint">저장하면 상품 수량만큼 칸이 생기고 무작위로 섞여요. 어느 칸에 뭐가 있는지는 뜯기 전까지 아무도 못 봐요. 이미 뜯긴 판에서 저장하면 판이 처음부터 다시 시작돼요 (길드원 사용 GP는 그대로).</p>
+        <p class="hint">저장하면 상품 수량만큼 티켓이 만들어지고 섞여요. 수량 3개 이하인 상은 판 위쪽 큰 카드, 나머지는 가로줄로 나와요. 진행 중인 판에서 저장하면 판이 처음부터 다시 시작돼요 (길드원 사용 GP는 그대로).</p>
       </div>
       <div class="card">
         <h3>길드원 <span class="hint" id="mCount"></span></h3>
@@ -98,7 +98,7 @@ async function load() {
   $('lastInfo').textContent = S.last_one_winner_name ? `라스트원 당첨: ${S.last_one_winner_name}` : '';
   const {count: openedCnt} = await sb.from('slots').select('no', {count: 'exact', head: true}).eq('opened', true);
   S.opened = openedCnt || 0;
-  $('boardInfo').textContent = S.board_size ? `지금 판: ${S.board_size}칸 중 ${S.opened}칸 뜯김` : '아직 판이 없어요. 상품을 넣고 저장하면 판이 만들어져요.';
+  $('boardInfo').textContent = S.board_size ? `지금 판: ${S.board_size}장 중 ${S.opened}장 뽑힘` : '아직 판이 없어요. 상품을 넣고 저장하면 판이 만들어져요.';
   drawPrizes(); drawMembers();
 }
 
@@ -182,10 +182,10 @@ $('addPrize').addEventListener('click', () => { const L = 'ABCDEFGHIJ'; edit.pus
 async function shuffle() {
   const {data, error} = await sb.rpc('shuffle_board');
   if (error) { toast('판 만들기 실패: ' + errMsg(error)); return false; }
-  toast(`판을 ${data}칸으로 새로 만들었어요`); return true;
+  toast(`판을 ${data}장으로 새로 만들었어요`); return true;
 }
 $('savePrizes').addEventListener('click', async e => {
-  if (S.opened && !confirm2(e.target, `뜯긴 칸 ${S.opened}개 있음 — 그래도 새 판?`)) return;
+  if (S.opened && !confirm2(e.target, `이미 ${S.opened}장 뽑힘 — 그래도 새 판?`)) return;
   const old = Object.fromEntries(prizes.map(p => [p.id, p]));
   const keep = edit.filter(p => p.grade.trim());
   const gone = prizes.filter(p => !keep.some(k => k.id === p.id)).map(p => p.id);

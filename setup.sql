@@ -135,11 +135,11 @@ revoke all on function public.shuffle_board() from public, anon;
 grant execute on function public.shuffle_board() to authenticated;
 
 -- ---------- 뽑기 (서버에서 처리: 확률/GP 계산 조작 불가) ----------
--- 고른 칸 번호 순서대로, 늘어난 GP로 되는 만큼만 뜯음
+-- 안 뜯은 티켓 중에서 무작위로, 늘어난 GP로 되는 만큼만 뽑음
 -- 뽑기 가능 GP = 지금 인증한 GP - 기준 GP - 이미 쓴 GP
 drop function if exists public.draw_kuji(uuid, text, int, text);
-drop function if exists public.draw_kuji(uuid, text, int, text, int);
-create or replace function public.draw_kuji(p_member uuid, p_pin text, p_slots int[], p_photo text, p_gp int)
+drop function if exists public.draw_kuji(uuid, text, int[], text, int);
+create or replace function public.draw_kuji(p_member uuid, p_pin text, p_count int, p_photo text, p_gp int)
 returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare
@@ -148,7 +148,6 @@ declare
   sl public.slots;
   pr public.prizes;
   v_hash text;
-  v_no int;
   k int := 0;
   can int;
   avail int;
@@ -160,11 +159,8 @@ begin
   if p_gp is null or p_gp < 0 then
     raise exception 'GP를 읽지 못했어요';
   end if;
-  if p_slots is null or cardinality(p_slots) = 0 then
-    raise exception '뜯을 칸을 골라 주세요';
-  end if;
-  if cardinality(p_slots) > 50 then
-    raise exception '한 번에 50칸까지만 뜯을 수 있어요';
+  if p_count is null or p_count < 1 or p_count > 50 then
+    raise exception '1~50장 사이로 골라 주세요';
   end if;
   if p_photo is null or not exists (select 1 from storage.objects where bucket_id = 'proofs' and name = p_photo) then
     raise exception '인증 사진이 업로드되지 않았어요';
@@ -196,18 +192,18 @@ begin
     raise exception '늘어난 GP가 부족해요 (사용 가능 GP: %, 1칸에 %)', greatest(avail, 0), s.cost;
   end if;
 
-  for v_no in select x from unnest(p_slots) with ordinality u(x, o) order by o loop
-    exit when k >= can;
-    select * into sl from public.slots where no = v_no for update;
-    if not found then raise exception '%번 칸은 없어요', v_no; end if;
-    if sl.opened then raise exception '%번 칸은 이미 뜯겼어요. 다른 칸을 골라 주세요', v_no; end if;
+  if not exists (select 1 from public.slots where not opened) then
+    raise exception '쿠지가 전부 소진됐어요';
+  end if;
+
+  for sl in select * from public.slots where not opened order by random() limit least(p_count, can) for update loop
     select * into pr from public.prizes where id = sl.prize_id;
     update public.slots
       set opened = true, opened_by = p_member, opened_name = m.name, opened_at = now(),
           grade = pr.grade, name = pr.name, color = pr.color, image = pr.image
-      where no = v_no;
+      where no = sl.no;
     update public.prizes set remaining = remaining - 1 where id = pr.id;
-    results := results || jsonb_build_object('no', v_no, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
+    results := results || jsonb_build_object('no', sl.no, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
     k := k + 1;
   end loop;
 
@@ -225,8 +221,8 @@ begin
 end $$;
 
 -- 뽑기는 서버 함수(kuji-draw)만 호출 가능
-revoke all on function public.draw_kuji(uuid, text, int[], text, int) from public, anon, authenticated;
-grant execute on function public.draw_kuji(uuid, text, int[], text, int) to service_role;
+revoke all on function public.draw_kuji(uuid, text, int, text, int) from public, anon, authenticated;
+grant execute on function public.draw_kuji(uuid, text, int, text, int) to service_role;
 
 -- AI 호출 전에 비밀번호부터 확인 (비번 없으면 true = 첫 뽑기)
 create or replace function public.verify_pin(p_member uuid, p_pin text)

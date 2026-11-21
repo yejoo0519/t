@@ -10,22 +10,27 @@
 </head>
 <body>
 <header class="band"><div class="wrap">
-  <div><h1 id="title">길드 쿠지</h1><p>GP 스샷 올리고, 늘어난 GP만큼 한 장씩 뜯어보자</p></div>
-  <div class="stat"><div><b id="sRemain">–</b><span>남은 쿠지</span></div><div><b id="sCost">–</b><span>1회 GP</span></div></div>
+  <div><h1 id="title">길드 쿠지</h1><p>칸 골라서 뜯자 — 늘어난 GP만큼</p></div>
+  <div class="stat"><div><b id="sRemain">–</b><span>남은 칸</span></div><div><b id="sCost">–</b><span>1칸 GP</span></div></div>
 </div></header>
 
 <main class="band"><div class="wrap">
   <div class="notice" id="setupNote" hidden><b>아직 설정 전이에요.</b> <code>config.js</code>에 Supabase 주소와 anon key를 넣어주세요. (README 참고)</div>
   <p id="status" class="hint">불러오는 중…</p>
-  <div class="grid">
-    <section class="card">
-      <h2>상품 보드</h2>
-      <div id="board"><div class="empty">아직 상품이 세팅되지 않았어요</div></div>
-      <div id="lastOne"></div>
-    </section>
 
+  <section class="kboard">
+    <div class="kboard-top">
+      <h2>쿠지판</h2>
+      <div id="lastOne"></div>
+    </div>
+    <div class="prizes" id="board"><div class="empty">아직 상품이 세팅되지 않았어요</div></div>
+    <div class="cells" id="cells"></div>
+    <p class="hint" id="cellHint">뜯고 싶은 칸을 눌러서 고르세요. 고른 순서대로, GP가 되는 만큼만 뜯겨요.</p>
+  </section>
+
+  <div class="grid" style="margin-top:28px">
     <section class="card">
-      <h2>뽑기</h2>
+      <h2>뜯기</h2>
       <div class="step"><em>1</em><div>
         <label for="who">내 닉네임</label>
         <select id="who"><option value="">닉네임을 선택하세요</option></select>
@@ -42,10 +47,10 @@
         <label class="drop" id="dropL"><input type="file" id="photo" accept="image/*"><span id="dropT">탭해서 사진 올리기</span></label>
       </div></div>
       <div class="step"><em>4</em><div>
-        <label for="count">몇 장 뽑을까</label>
-        <select id="count"><option value="">—</option></select>
+        <label>고른 칸</label>
+        <div id="picked" class="picked"><span class="hint" style="margin:0">위 쿠지판에서 칸을 눌러 고르세요</span></div>
       </div></div>
-      <button class="btn big" id="drawBtn" disabled>쿠지 뽑기</button>
+      <button class="btn big" id="drawBtn" disabled>쿠지 뜯기</button>
       <p class="hint err" id="drawErr"></p>
       <div id="resultBox" hidden>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:8px;flex-wrap:wrap">
@@ -54,12 +59,12 @@
         <div class="tickets" id="tickets"></div>
       </div>
     </section>
-  </div>
 
-  <section style="margin-top:36px">
-    <h2 style="font-size:28px;margin:0 0 14px">최근 결과</h2>
-    <div class="feed" id="feed"><div class="empty">아직 뽑은 사람이 없어요</div></div>
-  </section>
+    <section>
+      <h2 style="font-size:28px;margin:0 0 14px">최근 결과</h2>
+      <div class="feed" id="feed"><div class="empty">아직 뽑은 사람이 없어요</div></div>
+    </section>
+  </div>
   <p class="hint" style="margin-top:28px"><a href="admin.html">관리자</a></p>
 </div></main>
 
@@ -71,24 +76,48 @@
 <script src="common.js"></script>
 <script>
 {
-const {sb, ready, $, esc, badge, art, photoUrl, toast, errMsg, fmtTime} = K;
-let S = null, prizes = [], members = [], draws = [], photoFile = null, busy = false;
+const {sb, ready, $, esc, art, photoUrl, toast, errMsg, fmtTime} = K;
+const MAX_PICK = 50;
+let S = null, prizes = [], members = [], draws = [], opened = new Map(), picked = [], photoFile = null, busy = false;
 
-const remain = () => prizes.reduce((a, p) => a + p.remaining, 0);
 const me = () => members.find(m => m.id === $('who').value);
+const size = () => S?.board_size || 0;
+const left = () => size() - opened.size;
 
 function renderBoard() {
   $('title').textContent = S?.title || '길드 쿠지';
   document.title = (S?.title || '길드 쿠지') + ' 뽑기';
   $('sCost').textContent = S ? S.cost.toLocaleString() : '–';
-  const tot = prizes.reduce((a, p) => a + p.total, 0);
-  $('sRemain').textContent = prizes.length ? `${remain()} / ${tot}` : '–';
+  $('sRemain').textContent = size() ? `${left()} / ${size()}` : '–';
   $('board').innerHTML = prizes.length ? prizes.map(p => `<div class="prize ${p.remaining ? '' : 'out'}">${art(p.grade, p.color, p.image)}
     <div><div class="nm">${esc(p.name)}</div><div class="bar"><i style="width:${p.total ? p.remaining / p.total * 100 : 0}%;background:${esc(p.color)}"></i></div></div>
     <div class="cnt"><b>${p.remaining}</b><small> / ${p.total}</small></div></div>`).join('')
     : '<div class="empty">아직 상품이 세팅되지 않았어요</div>';
   $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>
-    <b>${S.last_one_winner_name ? esc(S.last_one_winner_name) + ' 당첨!' : '마지막 한 장을 뽑은 사람에게'}</b></div>` : '';
+    <b>${S.last_one_winner_name ? esc(S.last_one_winner_name) + ' 당첨!' : '마지막 칸을 뜯은 사람에게'}</b></div>` : '';
+  renderCells();
+}
+
+function renderCells() {
+  picked = picked.filter(n => n <= size() && !opened.has(n));
+  if (!size()) { $('cells').innerHTML = '<div class="empty" style="grid-column:1/-1">관리자가 아직 판을 만들지 않았어요</div>'; renderPicked(); return; }
+  let h = '';
+  for (let n = 1; n <= size(); n++) {
+    const o = opened.get(n), pi = picked.indexOf(n);
+    if (o) h += `<div class="cell open" style="--c:${esc(o.color)}" title="${n}번 · ${esc(o.grade)} ${esc(o.name)} · ${esc(o.opened_name)}">
+      ${o.image ? `<img src="${esc(o.image)}" alt="">` : `<b>${esc(o.grade)}</b>`}<i>${n}</i></div>`;
+    else h += `<button class="cell ${pi >= 0 ? 'sel' : ''}" data-n="${n}" aria-pressed="${pi >= 0}" aria-label="${n}번 칸">
+      <span>${n}</span>${pi >= 0 ? `<em>${pi + 1}</em>` : ''}</button>`;
+  }
+  $('cells').innerHTML = h;
+  renderPicked();
+}
+
+function renderPicked() {
+  $('picked').innerHTML = picked.length
+    ? picked.map((n, i) => `<button class="pk" data-n="${n}" aria-label="${n}번 빼기">${i + 1}. ${n}번 ✕</button>`).join('') + `<button class="pk clear" id="clearPick">전부 빼기</button>`
+    : '<span class="hint" style="margin:0">위 쿠지판에서 칸을 눌러 고르세요</span>';
+  renderMine();
 }
 
 function renderWho() {
@@ -102,47 +131,46 @@ function renderWho() {
 }
 
 function renderMine() {
-  const m = me(), cost = S?.cost || 0, cnt = $('count');
-  let max = 0, msg = '';
+  const m = me(), cost = S?.cost || 0;
+  let msg = '';
   if (m) {
-    max = cost ? Math.min(remain(), 50) : 0;
     const need = m.base_gp + m.used_gp + cost;
     $('myPts').innerHTML = `<span>기준 <b>${m.base_gp.toLocaleString()}</b></span><span>최근 인증 <b>${m.last_gp.toLocaleString()}</b></span><span>사용 <b>${m.used_gp.toLocaleString()}</b></span>`
-      + (cost ? `<span>내 GP가 <b>${need.toLocaleString()}</b> 이상이면 1장, 이후 <b>${cost.toLocaleString()}</b>마다 1장씩</span>` : '');
+      + (cost ? `<span>내 GP가 <b>${need.toLocaleString()}</b> 이상이면 1칸, 이후 <b>${cost.toLocaleString()}</b>마다 1칸씩</span>` : '');
     $('pinLabel').textContent = m.has_pin ? '비밀번호 4자리' : '처음이야! 앞으로 쓸 비밀번호 4자리 정하기';
     $('pinHint').textContent = m.has_pin ? '처음 뽑을 때 정한 숫자예요. 잊었으면 관리자에게 초기화 요청!' : '이 숫자를 기억해 둬요. 다음부터 이걸로 뽑아요.';
   } else $('myPts').innerHTML = '';
-  if (prizes.length && !remain()) msg = '쿠지가 전부 소진됐어요!';
-  const keep = +cnt.value || 1;
-  cnt.innerHTML = max ? Array.from({length: max}, (_, i) => `<option value="${i + 1}">최대 ${i + 1}장 (${((i + 1) * cost).toLocaleString()} GP)</option>`).join('') : '<option value="">—</option>';
-  if (max) cnt.value = String(Math.min(keep, max));
+  if (size() && !left()) msg = '쿠지판이 전부 뜯겼어요!';
   if (!busy) $('drawErr').textContent = msg;
-  $('drawBtn').disabled = busy || !m || !max || !photoFile || !/^\d{4}$/.test($('pin').value) || !!msg;
+  $('drawBtn').textContent = busy ? $('drawBtn').textContent : picked.length ? `고른 ${picked.length}칸 뜯기` : '쿠지 뜯기';
+  $('drawBtn').disabled = busy || !m || !picked.length || !photoFile || !/^\d{4}$/.test($('pin').value) || !!msg;
 }
 
 function renderFeed() {
   $('feed').innerHTML = draws.length ? draws.map(d => `<div class="fr">
     <img src="${esc(photoUrl(d.photo))}" alt="${esc(d.name)} 인증 사진" data-full="${esc(photoUrl(d.photo))}" loading="lazy">
     <div><b>${esc(d.name)}</b> <time>${fmtTime(d.created_at)}${d.reported_gp != null ? ` · 인증 ${d.reported_gp.toLocaleString()} GP` : ''}</time>
-    <div class="chips">${(d.results || []).map(r => `<span class="chip" style="background:${esc(r.color)}">${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}${esc(r.grade)} ${esc(r.name)}</span>`).join('')}</div></div></div>`).join('')
+    <div class="chips">${(d.results || []).map(r => `<span class="chip" style="background:${esc(r.color)}">${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}${r.no ? r.no + '번 ' : ''}${esc(r.grade)} ${esc(r.name)}</span>`).join('')}</div></div></div>`).join('')
     : '<div class="empty">아직 뽑은 사람이 없어요</div>';
 }
 
 async function load() {
-  const [a, b, c, d] = await Promise.all([
+  const [a, b, c, d, e] = await Promise.all([
     sb.from('settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('prizes').select('*').order('sort').order('id'),
     sb.from('members').select('id,name,base_gp,last_gp,used_gp,has_pin'),
-    sb.from('draws').select('*').order('created_at', {ascending: false}).limit(40)
+    sb.from('draws').select('*').order('created_at', {ascending: false}).limit(40),
+    sb.from('slots').select('no,grade,name,color,image,opened_name').eq('opened', true)
   ]);
-  const err = a.error || b.error || c.error || d.error;
+  const err = a.error || b.error || c.error || d.error || e.error;
   if (err) { $('status').textContent = '불러오지 못했어요: ' + errMsg(err); $('status').hidden = false; return; }
   S = a.data; prizes = b.data; members = c.data; draws = d.data;
+  opened = new Map(e.data.map(x => [x.no, x]));
   $('status').hidden = true;
   renderBoard(); renderWho(); renderFeed();
 }
 
-// 사진은 1280px로 줄여서 올림 (용량 절약)
+// 사진은 1600px로 줄여서 올림 (용량 절약)
 async function shrink(file) {
   try {
     const bmp = await createImageBitmap(file);
@@ -150,14 +178,14 @@ async function shrink(file) {
     const c = document.createElement('canvas');
     c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-    return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85)) || file;
+    return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88)) || file;
   } catch (e) { return file; }
 }
 
 async function doDraw() {
-  const m = me(), n = +$('count').value, pin = $('pin').value;
-  if (!m || !n || !photoFile) return;
-  busy = true; $('drawErr').textContent = ''; $('drawBtn').textContent = '뽑는 중…'; renderMine();
+  const m = me(), pin = $('pin').value;
+  if (!m || !picked.length || !photoFile) return;
+  busy = true; $('drawErr').textContent = ''; $('drawBtn').textContent = '사진 올리는 중…'; renderMine();
   try {
     const blob = await shrink(photoFile);
     const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
@@ -165,30 +193,45 @@ async function doDraw() {
     const up = await sb.storage.from('proofs').upload(path, blob, {contentType: blob.type || 'image/jpeg'});
     if (up.error) throw new Error('사진 업로드 실패: ' + errMsg(up.error));
     $('drawBtn').textContent = '스샷 읽는 중…';
-    const {data, error} = await sb.functions.invoke('kuji-draw', {body: {member: m.id, pin, count: n, photo: path}});
+    const {data, error} = await sb.functions.invoke('kuji-draw', {body: {member: m.id, pin, slots: picked, photo: path}});
     if (error) throw new Error('서버 함수 호출 실패: ' + errMsg(error));
     if (!data.ok) throw new Error((data.gp != null ? `읽은 GP ${data.gp.toLocaleString()} — ` : '') + data.error);
     try { localStorage.setItem('kuji-who', m.id); } catch (e) {}
     showTickets(data.results);
-    toast(`스샷 GP ${data.gp.toLocaleString()} 인식 → ${data.count}장`);
+    const want = picked.length;
+    toast(`스샷 GP ${data.gp.toLocaleString()} 인식 → ${data.count}칸 뜯음${data.count < want ? ` (GP 부족으로 ${want - data.count}칸은 남김)` : ''}`);
+    picked = [];
     photoFile = null; $('photo').value = ''; $('dropT').textContent = '탭해서 사진 올리기'; $('dropL').querySelector('img')?.remove();
     await load();
   } catch (e) {
     $('drawErr').textContent = errMsg(e);
+    load();
   } finally {
-    busy = false; $('drawBtn').textContent = '쿠지 뽑기'; renderMine();
+    busy = false; renderMine();
   }
 }
 
 function showTickets(rs) {
   $('resultBox').hidden = false;
-  $('tickets').innerHTML = rs.map((r, i) => `<button class="tk" aria-label="${i + 1}번 티켓 열기"><div class="in">
-    <div class="f">${r.last ? 'LAST' : '뜯기'}</div><div class="b">${art(r.grade, r.color, r.image)}<small>${esc(r.name)}</small></div></div></button>`).join('');
+  $('tickets').innerHTML = rs.map(r => `<button class="tk" aria-label="${r.no ? r.no + '번' : '라스트원'} 티켓 열기"><div class="in">
+    <div class="f">${r.last ? 'LAST' : r.no + '번'}</div><div class="b">${art(r.grade, r.color, r.image)}<small>${esc(r.name)}</small></div></div></button>`).join('');
   $('resultBox').scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 
+$('cells').addEventListener('click', e => {
+  const b = e.target.closest('button.cell'); if (!b || busy) return;
+  const n = +b.dataset.n, i = picked.indexOf(n);
+  if (i >= 0) picked.splice(i, 1);
+  else if (picked.length >= MAX_PICK) { toast(`한 번에 ${MAX_PICK}칸까지 고를 수 있어요`); return; }
+  else picked.push(n);
+  renderCells();
+});
+$('picked').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || busy) return;
+  if (b.id === 'clearPick') picked = []; else picked = picked.filter(n => n !== +b.dataset.n);
+  renderCells();
+});
 $('who').addEventListener('change', () => { renderMine(); try { localStorage.setItem('kuji-who', $('who').value); } catch (e) {} });
-$('count').addEventListener('change', renderMine);
 $('pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); renderMine(); });
 $('photo').addEventListener('change', e => {
   photoFile = e.target.files[0] || null;

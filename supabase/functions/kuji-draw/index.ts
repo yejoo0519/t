@@ -84,10 +84,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return fail("POST만 돼요");
 
-  let body: { member?: string; pin?: string; count?: number; photo?: string };
+  let body: { member?: string; pin?: string; slots?: unknown; photo?: string };
   try { body = await req.json(); } catch { return fail("잘못된 요청이에요"); }
-  const { member, pin, count, photo } = body;
+  const { member, pin, photo } = body;
+  const slots = Array.isArray(body.slots) ? [...new Set(body.slots.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 50) : [];
   if (!member || !photo || typeof pin !== "string" || !/^\d{4}$/.test(pin)) return fail("닉네임·비밀번호·사진을 확인해 주세요");
+  if (!slots.length) return fail("뜯을 칸을 골라 주세요");
 
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -114,7 +116,7 @@ Deno.serve(async (req) => {
   }
 
   const { data, error } = await sb.rpc("draw_kuji", {
-    p_member: member, p_pin: pin, p_count: Math.max(1, Math.min(50, Number(count) || 1)), p_photo: photo, p_gp: read.gp,
+    p_member: member, p_pin: pin, p_slots: slots, p_photo: photo, p_gp: read.gp,
   });
   if (error) { await drop(); return fail(error.message, { gp: read.gp }); }
   return reply({ ok: true, gp: read.gp, ...data });

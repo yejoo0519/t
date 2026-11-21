@@ -93,29 +93,78 @@ create policy "admin" on public.member_pins for all using (public.is_admin()) wi
 create policy "admin" on public.draws       for all using (public.is_admin()) with check (public.is_admin());
 -- admins 테이블은 정책 없음 = SQL Editor 에서만 수정 가능
 
--- ---------- 뽑기 (서버에서 처리: 확률/포인트 조작 불가) ----------
+-- ---------- 쿠지판 칸 (어느 칸에 뭐가 있는지는 뜯기 전까지 비공개) ----------
+alter table public.settings add column if not exists board_size int not null default 0;
+
+create table if not exists public.slots (
+  no int primary key,
+  prize_id uuid references public.prizes(id) on delete cascade,
+  opened boolean not null default false,
+  opened_by uuid,
+  opened_name text,
+  opened_at timestamptz,
+  grade text,
+  name text,
+  color text,
+  image text
+);
+alter table public.slots enable row level security;
+drop policy if exists "read opened" on public.slots;
+drop policy if exists "admin" on public.slots;
+create policy "read opened" on public.slots for select using (opened);
+create policy "admin" on public.slots for all using (public.is_admin()) with check (public.is_admin());
+
+-- 판 새로 만들기: 상품 수량만큼 칸을 만들고 무작위로 섞음 (관리자만)
+create or replace function public.shuffle_board()
+returns int
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if not public.is_admin() then raise exception '관리자만 할 수 있어요'; end if;
+  perform 1 from public.settings where id = 1 for update;
+  delete from public.slots where true;
+  update public.prizes set remaining = total where true;
+  insert into public.slots (no, prize_id)
+    select row_number() over (order by random()), t.id
+    from (select p.id from public.prizes p cross join lateral generate_series(1, p.total)) t;
+  select count(*) into n from public.slots;
+  update public.settings set board_size = n, last_one_winner = null, last_one_winner_name = null where id = 1;
+  return n;
+end $$;
+revoke all on function public.shuffle_board() from public, anon;
+grant execute on function public.shuffle_board() to authenticated;
+
 -- ---------- 뽑기 (서버에서 처리: 확률/GP 계산 조작 불가) ----------
+-- 고른 칸 번호 순서대로, 늘어난 GP로 되는 만큼만 뜯음
 -- 뽑기 가능 GP = 지금 인증한 GP - 기준 GP - 이미 쓴 GP
 drop function if exists public.draw_kuji(uuid, text, int, text);
-create or replace function public.draw_kuji(p_member uuid, p_pin text, p_count int, p_photo text, p_gp int)
+drop function if exists public.draw_kuji(uuid, text, int, text, int);
+create or replace function public.draw_kuji(p_member uuid, p_pin text, p_slots int[], p_photo text, p_gp int)
 returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare
   s public.settings;
   m public.members;
+  sl public.slots;
+  pr public.prizes;
   v_hash text;
-  k int;
+  v_no int;
+  k int := 0;
+  can int;
   avail int;
-  left_total int;
-  r int;
-  p record;
   results jsonb := '[]'::jsonb;
 begin
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then
     raise exception '비밀번호는 숫자 4자리로 입력해 주세요';
   end if;
   if p_gp is null or p_gp < 0 then
-    raise exception '지금 GP를 입력해 주세요';
+    raise exception 'GP를 읽지 못했어요';
+  end if;
+  if p_slots is null or cardinality(p_slots) = 0 then
+    raise exception '뜯을 칸을 골라 주세요';
+  end if;
+  if cardinality(p_slots) > 50 then
+    raise exception '한 번에 50칸까지만 뜯을 수 있어요';
   end if;
   if p_photo is null or not exists (select 1 from storage.objects where bucket_id = 'proofs' and name = p_photo) then
     raise exception '인증 사진이 업로드되지 않았어요';
@@ -138,30 +187,32 @@ begin
   end if;
 
   if p_gp < m.last_gp then
-    raise exception '전에 인증한 GP(%)보다 작아요. 숫자를 다시 확인해 주세요', m.last_gp;
+    raise exception '전에 인증한 GP(%)보다 작아요. 최신 스샷인지 확인해 주세요', m.last_gp;
   end if;
 
   avail := p_gp - m.base_gp - m.used_gp;
-  select coalesce(sum(remaining), 0) into left_total from public.prizes;
-  k := least(greatest(coalesce(p_count, 0), 0), left_total, greatest(avail, 0) / s.cost);
-  if k < 1 then
-    raise exception '늘어난 GP가 부족하거나 남은 쿠지가 없어요 (사용 가능 GP: %)', greatest(avail, 0);
+  can := greatest(avail, 0) / s.cost;
+  if can < 1 then
+    raise exception '늘어난 GP가 부족해요 (사용 가능 GP: %, 1칸에 %)', greatest(avail, 0), s.cost;
   end if;
 
-  for i in 1..k loop
-    r := floor(random() * left_total)::int;
-    for p in select * from public.prizes where remaining > 0 order by sort, id loop
-      r := r - p.remaining;
-      if r < 0 then
-        update public.prizes set remaining = remaining - 1 where id = p.id;
-        results := results || jsonb_build_object('grade', p.grade, 'name', p.name, 'color', p.color, 'image', p.image);
-        exit;
-      end if;
-    end loop;
-    left_total := left_total - 1;
+  for v_no in select x from unnest(p_slots) with ordinality u(x, o) order by o loop
+    exit when k >= can;
+    select * into sl from public.slots where no = v_no for update;
+    if not found then raise exception '%번 칸은 없어요', v_no; end if;
+    if sl.opened then raise exception '%번 칸은 이미 뜯겼어요. 다른 칸을 골라 주세요', v_no; end if;
+    select * into pr from public.prizes where id = sl.prize_id;
+    update public.slots
+      set opened = true, opened_by = p_member, opened_name = m.name, opened_at = now(),
+          grade = pr.grade, name = pr.name, color = pr.color, image = pr.image
+      where no = v_no;
+    update public.prizes set remaining = remaining - 1 where id = pr.id;
+    results := results || jsonb_build_object('no', v_no, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
+    k := k + 1;
   end loop;
 
-  if left_total = 0 and s.last_one_name <> '' and s.last_one_winner is null then
+  if s.last_one_name <> '' and s.last_one_winner is null
+     and not exists (select 1 from public.slots where not opened) then
     update public.settings set last_one_winner = p_member, last_one_winner_name = m.name where id = 1;
     results := results || jsonb_build_object('grade', '라스트원', 'name', s.last_one_name, 'color', '#1b1416', 'last', true);
   end if;
@@ -174,8 +225,8 @@ begin
 end $$;
 
 -- 뽑기는 서버 함수(kuji-draw)만 호출 가능
-revoke all on function public.draw_kuji(uuid, text, int, text, int) from public, anon, authenticated;
-grant execute on function public.draw_kuji(uuid, text, int, text, int) to service_role;
+revoke all on function public.draw_kuji(uuid, text, int[], text, int) from public, anon, authenticated;
+grant execute on function public.draw_kuji(uuid, text, int[], text, int) to service_role;
 
 -- AI 호출 전에 비밀번호부터 확인 (비번 없으면 true = 첫 뽑기)
 create or replace function public.verify_pin(p_member uuid, p_pin text)
@@ -199,9 +250,16 @@ create policy "kuji admin delete proofs" on storage.objects for delete
   using (bucket_id = 'proofs' and public.is_admin());
 
 -- ---------- 실시간 반영 ----------
-do $$ begin
-  alter publication supabase_realtime add table public.settings, public.prizes, public.members, public.draws;
-exception when others then null; end $$;
+do $$
+declare t text;
+begin
+  foreach t in array array['settings','prizes','members','draws','slots'] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception when others then null;
+    end;
+  end loop;
+end $$;
 
 -- ---------- 길드원 초기 데이터 (11/22 GP 스샷 기준) ----------
 insert into public.members (name, base_gp) values

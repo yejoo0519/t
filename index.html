@@ -18,6 +18,7 @@
   <div class="notice" id="setupNote" hidden><b>아직 설정 전이에요.</b> <code>config.js</code>에 Supabase 주소와 anon key를 넣어주세요. (README 참고)</div>
   <p id="status">불러오는 중…</p>
 
+  <div class="layout">
   <section class="pop" id="pop" aria-label="쿠지판">
     <div class="pop-head">
       <h2>쿠지판</h2>
@@ -29,7 +30,7 @@
     <div class="empty" id="popEmpty" hidden>관리자가 아직 판을 만들지 않았어요</div>
   </section>
 
-  <div class="grid" style="margin-top:26px">
+    <aside class="side">
     <section class="card" id="reg">
       <h2>길포 등록</h2>
       <div class="step"><em>1</em><div>
@@ -59,10 +60,11 @@
       <div class="vres" id="vres" hidden></div>
     </section>
 
-    <section>
+    <section class="side-feed">
       <h2 class="sec-h">최근 결과</h2>
       <div class="feed" id="feed"><div class="empty">아직 뽑은 사람이 없어요</div></div>
     </section>
+    </aside>
   </div>
   <p style="margin-top:28px;font-size:14px"><a href="admin.html">관리자</a></p>
 </div></main>

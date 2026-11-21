@@ -280,3 +280,13 @@ header .btn.ghost{color:#fff;border-color:#fff8}
 @keyframes glow{50%{box-shadow:0 0 0 3px var(--gold),0 0 18px 6px rgba(247,201,72,.8)}}
 @media(prefers-reduced-motion:reduce){.rv-f,.rv-b,.fold{transition:none}.rv:not(.open) .rv-f,.rv.open::after,.tix.fresh{animation:none}}
 @media(max-width:600px){.pile{grid-template-columns:repeat(auto-fill,minmax(54px,1fr));margin:0 8px;padding:12px 8px}.reveal{grid-template-columns:repeat(2,minmax(0,1fr));margin:0 8px}}
+
+/* ---------- 쿠지판(왼쪽) + 길포 등록(오른쪽) ---------- */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:24px;align-items:start}
+.side{display:grid;gap:24px;min-width:0}
+.side-feed .sec-h{margin-bottom:12px}
+@media(min-width:1001px){
+  .layout .pop-top{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}
+  .layout .pr{grid-template-columns:minmax(0,240px) minmax(0,1fr)}
+}
+@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}

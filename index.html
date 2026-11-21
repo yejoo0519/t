@@ -20,7 +20,7 @@
 
   <section class="pop" aria-label="쿠지판">
     <div class="pop-head">
-      <h2 id="popTitle">쿠지판</h2>
+      <h2>쿠지판</h2>
       <div class="pop-left"><span>남은 쿠지</span><b id="popLeft">–</b></div>
     </div>
     <div class="pop-top" id="popTop"></div>
@@ -29,7 +29,7 @@
     <div class="empty" id="popEmpty" hidden>관리자가 아직 판을 만들지 않았어요</div>
   </section>
 
-  <div class="grid" style="margin-top:28px">
+  <div class="grid" style="margin-top:26px">
     <section class="card">
       <h2>뽑기</h2>
       <div class="step"><em>1</em><div>
@@ -63,11 +63,11 @@
     </section>
 
     <section>
-      <h2 style="font-size:28px;margin:0 0 14px">최근 결과</h2>
+      <h2 class="sec-h">최근 결과</h2>
       <div class="feed" id="feed"><div class="empty">아직 뽑은 사람이 없어요</div></div>
     </section>
   </div>
-  <p class="hint" style="margin-top:28px"><a href="admin.html">관리자</a></p>
+  <p style="margin-top:28px;font-size:14px"><a href="admin.html">관리자</a></p>
 </div></main>
 
 <div class="modal" id="modal" hidden><img id="modalImg" alt="인증 사진"></div>
@@ -89,7 +89,7 @@ const letter = g => String(g || '').replace(/\s*상$/, '') || '?';
 
 function renderBoard() {
   const t = S?.title || '길드 쿠지';
-  $('title').textContent = t; $('popTitle').textContent = t; document.title = t + ' 뽑기';
+  $('title').textContent = t; document.title = t + ' 뽑기';
   $('sCost').textContent = S ? S.cost.toLocaleString() : '–';
   const rem = left();
   $('sRemain').textContent = size() ? `${rem} / ${size()}` : '–';
@@ -100,21 +100,23 @@ function renderBoard() {
   const stubs = p => {
     const got = (byPrize.get(p.id) || []).sort((x, y) => String(x.opened_at).localeCompare(String(y.opened_at)));
     let h = got.map(o => `<span class="stub" title="${esc(o.opened_name)}">${esc(letter(p.grade))}</span>`).join('');
-    for (let i = got.length; i < p.total; i++) h += '<span class="stub blank"></span>';
+    for (let i = got.length; i < p.total; i++) h += `<span class="stub blank">${esc(letter(p.grade))}</span>`;
     return h;
   };
   const done = p => p.remaining ? '' : '<span class="stamp">종료</span>';
   const pic = p => p.image ? `<img src="${esc(p.image)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`;
+  const gl = p => `<span class="gl"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>`;
+  const cd = p => `<div class="cd"><small>남은</small><b>${p.remaining}</b><em>/ ${p.total}장</em></div>`;
   const big = prizes.filter(p => p.total <= 3), small = prizes.filter(p => p.total > 3);
   $('popTop').innerHTML = big.map(p => `<div class="pc ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pc-h"><span class="L">${esc(letter(p.grade))}</span><span class="nm">${esc(p.name)}</span></div>
+    <div class="pc-h">${gl(p)}<span class="nm">${esc(p.name)}</span></div>
     <div class="pc-img">${pic(p)}</div>
-    <div class="pc-f"><div class="stubs">${stubs(p)}</div><div class="cd"><small>남은</small><b>${p.remaining}</b><small>/${p.total}장</small></div></div>
+    <div class="pc-f"><div class="paste"><small>당첨권</small><div class="stubs">${stubs(p)}</div></div>${cd(p)}</div>
     ${done(p)}</div>`).join('');
   $('popRows').innerHTML = small.map(p => `<div class="pr ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pr-l"><div class="pr-img">${pic(p)}</div><span class="L">${esc(letter(p.grade))}</span><span class="nm">${esc(p.name)}</span></div>
-    <div class="stubs">${stubs(p)}</div>
-    <div class="cd"><small>남은</small><b>${p.remaining}</b><small>/${p.total}장</small></div>
+    <div class="pr-l">${gl(p)}${p.image ? `<div class="pr-img"><img src="${esc(p.image)}" alt=""></div>` : ''}<span class="nm">${esc(p.name)}</span></div>
+    <div class="strip"><div class="stubs">${stubs(p)}</div></div>
+    <div class="cdw">${cd(p)}</div>
     ${done(p)}</div>`).join('');
   $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>
     <b>${S.last_one_winner_name ? esc(S.last_one_winner_name) + ' 당첨!' : '마지막 한 장을 뽑은 사람에게'}</b></div>` : '';

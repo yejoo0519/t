@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>쿠지 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <div><h1>쿠지 관리자</h1><p><a href="index.html">← 뽑기 화면</a></p></div>
+  <button class="btn ghost" id="logout" style="color:#fff;border-color:#fff8" hidden>로그아웃</button>
+</div></header>
+
+<main class="band"><div class="wrap">
+  <div class="notice" id="setupNote" hidden><b>아직 설정 전이에요.</b> <code>kuji/config.js</code>에 Supabase 주소와 anon key를 넣어주세요.</div>
+
+  <section class="card" id="loginBox" style="max-width:420px" hidden>
+    <h2>로그인</h2>
+    <form id="loginForm">
+      <label for="email">이메일</label><input type="email" id="email" autocomplete="username" required>
+      <label for="pw" style="margin-top:12px">비밀번호</label><input type="password" id="pw" autocomplete="current-password" required>
+      <button class="btn" style="margin-top:14px;width:100%">로그인</button>
+      <p class="hint err" id="loginErr"></p>
+    </form>
+  </section>
+
+  <div id="panel" hidden>
+    <div class="agrid" style="margin-top:0">
+      <div class="card">
+        <h3>기본 설정</h3>
+        <label for="aTitle">쿠지 이름</label><input type="text" id="aTitle">
+        <label for="aCost" style="margin-top:12px">1회당 차감 GP</label><input type="number" id="aCost" min="1">
+        <label for="aLast" style="margin-top:12px">라스트원 상품 (비우면 없음)</label><input type="text" id="aLast">
+        <p class="hint" id="lastInfo"></p>
+        <button class="btn" id="saveCfg" style="margin-top:12px">설정 저장</button>
+      </div>
+      <div class="card">
+        <h3>GP 일괄 입력</h3>
+        <p class="hint" style="margin-top:0">한 줄에 <b>닉네임 GP</b>. 이미 있는 닉네임은 GP가 덮어써지고, 없으면 새로 추가돼요.</p>
+        <textarea id="bulk" placeholder="Genesis.Kyung 133518&#10;GENESIS.피올 84129"></textarea>
+        <button class="btn" id="importBtn" style="margin-top:10px">불러오기</button>
+      </div>
+    </div>
+
+    <div class="agrid">
+      <div class="card">
+        <h3>상품 구성</h3>
+        <div class="scroll"><table><thead><tr><th>등급</th><th>상품명</th><th>총</th><th>남음</th><th>색</th><th></th></tr></thead><tbody id="pEdit"></tbody></table></div>
+        <div class="row-btns">
+          <button class="btn ghost" id="addPrize">+ 등급 추가</button>
+          <button class="btn" id="savePrizes">상품 저장</button>
+          <button class="btn ghost" id="resetBtn">판 초기화</button>
+        </div>
+        <p class="hint">총 수량을 바꾸면 남은 수량도 같은 만큼 늘거나 줄어요. 판 초기화는 남은 수량을 총 수량으로 되돌리고 라스트원 당첨을 지워요 (GP는 안 돌려줌).</p>
+      </div>
+      <div class="card">
+        <h3>길드원 <span class="hint" id="mCount"></span></h3>
+        <div class="scroll"><table><thead><tr><th>닉네임</th><th>GP</th><th>비번</th><th></th></tr></thead><tbody id="mEdit"></tbody></table></div>
+        <p class="hint">GP 칸을 고치고 칸 밖을 누르면 바로 저장돼요.</p>
+      </div>
+    </div>
+  </div>
+</div></main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+{
+const {sb, ready, $, esc, COLORS, toast, errMsg} = K;
+let S = null, prizes = [], members = [], edit = [];
+
+async function check() {
+  const {data: {session}} = await sb.auth.getSession();
+  if (!session) { $('loginBox').hidden = false; $('panel').hidden = true; $('logout').hidden = true; return; }
+  const {data: ok} = await sb.rpc('is_admin');
+  if (!ok) { $('loginBox').hidden = false; $('loginErr').textContent = '관리자로 등록되지 않은 계정이에요 (setup.sql 맨 아래 이메일 확인).'; await sb.auth.signOut(); return; }
+  $('loginBox').hidden = true; $('panel').hidden = false; $('logout').hidden = false;
+  await load();
+}
+
+async function load() {
+  const [a, b, c] = await Promise.all([
+    sb.from('settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('prizes').select('*').order('sort').order('id'),
+    sb.from('members').select('id,name,points,has_pin').order('points', {ascending: false})
+  ]);
+  if (a.error || b.error || c.error) { toast('불러오기 실패: ' + errMsg(a.error || b.error || c.error)); return; }
+  S = a.data; prizes = b.data; members = c.data;
+  edit = prizes.map(p => ({...p}));
+  $('aTitle').value = S.title; $('aCost').value = S.cost; $('aLast').value = S.last_one_name;
+  $('lastInfo').textContent = S.last_one_winner_name ? `라스트원 당첨: ${S.last_one_winner_name}` : '';
+  drawPrizes(); drawMembers();
+}
+
+function drawPrizes() {
+  $('pEdit').innerHTML = edit.length ? edit.map((p, i) => `<tr data-i="${i}">
+    <td><input type="text" data-k="grade" value="${esc(p.grade)}" style="width:76px" aria-label="등급"></td>
+    <td><input type="text" data-k="name" value="${esc(p.name)}" aria-label="상품명"></td>
+    <td><input type="number" data-k="total" value="${p.total}" min="0" style="width:72px" aria-label="총 수량"></td>
+    <td class="n">${p.id ? p.remaining : '–'}</td>
+    <td><input type="color" data-k="color" value="${esc(p.color)}" aria-label="색" style="width:44px;height:40px;border:0;background:none"></td>
+    <td><button class="x pdel" aria-label="삭제">✕</button></td></tr>`).join('') : '<tr><td colspan="6" class="hint">+ 등급 추가로 시작하세요</td></tr>';
+}
+
+function drawMembers() {
+  $('mCount').textContent = `${members.length}명`;
+  $('mEdit').innerHTML = members.map(m => `<tr data-id="${esc(m.id)}"><td>${esc(m.name)}</td>
+    <td><input type="number" class="mp" value="${m.points}" style="width:110px" aria-label="${esc(m.name)} GP"></td>
+    <td>${m.has_pin ? '<button class="x pin">초기화</button>' : '<span class="hint">없음</span>'}</td>
+    <td><button class="x del" aria-label="${esc(m.name)} 삭제">✕</button></td></tr>`).join('');
+}
+
+const confirm2 = (b, label) => { if (b.dataset.sure) return true; const o = b.textContent; b.dataset.sure = 1; b.textContent = label; setTimeout(() => { delete b.dataset.sure; b.textContent = o; }, 3000); return false; };
+const run = async (q, ok) => { const {error} = await q; if (error) { toast('실패: ' + errMsg(error)); return false; } if (ok) toast(ok); return true; };
+
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('loginErr').textContent = '';
+  const {error} = await sb.auth.signInWithPassword({email: $('email').value.trim(), password: $('pw').value});
+  if (error) { $('loginErr').textContent = '로그인 실패: ' + errMsg(error); return; }
+  check();
+});
+$('logout').addEventListener('click', async () => { await sb.auth.signOut(); check(); });
+
+$('saveCfg').addEventListener('click', async () => {
+  const cost = Math.max(1, parseInt($('aCost').value, 10) || 1);
+  if (await run(sb.from('settings').update({title: $('aTitle').value.trim() || '길드 쿠지', cost, last_one_name: $('aLast').value.trim()}).eq('id', 1), '설정 저장')) load();
+});
+
+$('importBtn').addEventListener('click', async () => {
+  const rows = [], bad = [];
+  for (const l of $('bulk').value.split('\n').map(s => s.trim()).filter(Boolean)) {
+    const m = l.match(/^(.+?)[\s,\t]+(-?[\d,]+)\s*(GP)?$/i);
+    if (m) rows.push({name: m[1].trim(), points: parseInt(m[2].replace(/,/g, ''), 10)}); else bad.push(l);
+  }
+  if (!rows.length) { toast('형식이 맞는 줄이 없어요'); return; }
+  if (await run(sb.from('members').upsert(rows, {onConflict: 'name'}), `${rows.length}명 반영${bad.length ? `, ${bad.length}줄 형식 오류` : ''}`)) { $('bulk').value = bad.join('\n'); load(); }
+});
+
+$('mEdit').addEventListener('change', async e => {
+  if (!e.target.classList.contains('mp')) return;
+  const id = e.target.closest('tr').dataset.id;
+  await run(sb.from('members').update({points: parseInt(e.target.value, 10) || 0}).eq('id', id), 'GP 수정');
+});
+$('mEdit').addEventListener('click', async e => {
+  const tr = e.target.closest('tr'); if (!tr) return; const id = tr.dataset.id, b = e.target.closest('button'); if (!b) return;
+  if (b.classList.contains('pin')) {
+    if (!confirm2(b, '정말?')) return;
+    if (await run(sb.from('member_pins').delete().eq('member_id', id)) && await run(sb.from('members').update({has_pin: false}).eq('id', id), '비밀번호 초기화')) load();
+  }
+  if (b.classList.contains('del')) {
+    if (!confirm2(b, '삭제?')) return;
+    if (await run(sb.from('members').delete().eq('id', id), '삭제했어요')) load();
+  }
+});
+
+$('pEdit').addEventListener('input', e => { const k = e.target.dataset.k; if (!k) return; const p = edit[+e.target.closest('tr').dataset.i]; p[k] = k === 'total' ? Math.max(0, parseInt(e.target.value, 10) || 0) : e.target.value; });
+$('pEdit').addEventListener('click', e => { if (e.target.closest('.pdel')) { edit.splice(+e.target.closest('tr').dataset.i, 1); drawPrizes(); } });
+$('addPrize').addEventListener('click', () => { const L = 'ABCDEFGHIJ'; edit.push({grade: (L[edit.length] || '?') + '상', name: '', total: 1, color: COLORS[edit.length % COLORS.length]}); drawPrizes(); });
+
+$('savePrizes').addEventListener('click', async () => {
+  const old = Object.fromEntries(prizes.map(p => [p.id, p]));
+  const keep = edit.filter(p => p.grade.trim());
+  const gone = prizes.filter(p => !keep.some(k => k.id === p.id)).map(p => p.id);
+  if (gone.length && !await run(sb.from('prizes').delete().in('id', gone))) return;
+  const ups = keep.filter(p => p.id).map((p, i) => { const o = old[p.id]; return {id: p.id, grade: p.grade.trim(), name: p.name.trim(), total: p.total, color: p.color, sort: keep.indexOf(p),
+    remaining: Math.max(0, Math.min(p.total, o.remaining + p.total - o.total))}; });
+  const news = keep.filter(p => !p.id).map(p => ({grade: p.grade.trim(), name: p.name.trim(), total: p.total, remaining: p.total, color: p.color, sort: keep.indexOf(p)}));
+  if (ups.length && !await run(sb.from('prizes').upsert(ups))) return;
+  if (news.length && !await run(sb.from('prizes').insert(news))) return;
+  toast('상품 저장'); load();
+});
+
+$('resetBtn').addEventListener('click', async e => {
+  if (!confirm2(e.target, '정말 초기화?')) return;
+  for (const p of prizes) if (!await run(sb.from('prizes').update({remaining: p.total}).eq('id', p.id))) return;
+  if (await run(sb.from('settings').update({last_one_winner: null, last_one_winner_name: null}).eq('id', 1), '판을 초기화했어요')) load();
+});
+
+if (!ready) $('setupNote').hidden = false; else check();
+}
+</script>
+</body>
+</html>

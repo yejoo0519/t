@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>길드 쿠지 뽑기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <div><h1 id="title">길드 쿠지</h1><p>인증 사진 올리고 한 장씩 뜯어보자</p></div>
+  <div class="stat"><div><b id="sRemain">–</b><span>남은 쿠지</span></div><div><b id="sCost">–</b><span>1회 GP</span></div></div>
+</div></header>
+
+<main class="band"><div class="wrap">
+  <div class="notice" id="setupNote" hidden><b>아직 설정 전이에요.</b> <code>kuji/config.js</code>에 Supabase 주소와 anon key를 넣어주세요. (README 참고)</div>
+  <p id="status" class="hint">불러오는 중…</p>
+  <div class="grid">
+    <section class="card">
+      <h2>상품 보드</h2>
+      <div id="board"><div class="empty">아직 상품이 세팅되지 않았어요</div></div>
+      <div id="lastOne"></div>
+    </section>
+
+    <section class="card">
+      <h2>뽑기</h2>
+      <div class="step"><em>1</em><div>
+        <label for="who">내 닉네임</label>
+        <select id="who"><option value="">닉네임을 선택하세요</option></select>
+        <div class="pts" id="myPts"></div>
+      </div></div>
+      <div class="step"><em>2</em><div>
+        <label for="pin" id="pinLabel">비밀번호 4자리</label>
+        <input type="password" id="pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="●●●●">
+        <p class="hint" id="pinHint">처음 뽑을 때 정한 숫자 4자리가 앞으로 내 비밀번호가 돼요.</p>
+      </div></div>
+      <div class="step"><em>3</em><div>
+        <label for="photo">인증 사진</label>
+        <label class="drop" id="dropL"><input type="file" id="photo" accept="image/*"><span id="dropT">탭해서 사진 올리기</span></label>
+      </div></div>
+      <div class="step"><em>4</em><div>
+        <label for="count">몇 장 뽑을까</label>
+        <select id="count"><option value="">—</option></select>
+      </div></div>
+      <button class="btn big" id="drawBtn" disabled>쿠지 뽑기</button>
+      <p class="hint err" id="drawErr"></p>
+      <div id="resultBox" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:8px;flex-wrap:wrap">
+          <b>결과 — 탭해서 뜯기</b><button class="btn ghost" id="openAll">모두 열기</button>
+        </div>
+        <div class="tickets" id="tickets"></div>
+      </div>
+    </section>
+  </div>
+
+  <section style="margin-top:36px">
+    <h2 style="font-size:28px;margin:0 0 14px">최근 결과</h2>
+    <div class="feed" id="feed"><div class="empty">아직 뽑은 사람이 없어요</div></div>
+  </section>
+  <p class="hint" style="margin-top:28px"><a href="admin.html">관리자</a></p>
+</div></main>
+
+<div class="modal" id="modal" hidden><img id="modalImg" alt="인증 사진"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+{
+const {sb, ready, $, esc, badge, photoUrl, toast, errMsg, fmtTime} = K;
+let S = null, prizes = [], members = [], draws = [], photoFile = null, busy = false;
+
+const remain = () => prizes.reduce((a, p) => a + p.remaining, 0);
+const me = () => members.find(m => m.id === $('who').value);
+
+function renderBoard() {
+  $('title').textContent = S?.title || '길드 쿠지';
+  document.title = (S?.title || '길드 쿠지') + ' 뽑기';
+  $('sCost').textContent = S ? S.cost.toLocaleString() : '–';
+  const tot = prizes.reduce((a, p) => a + p.total, 0);
+  $('sRemain').textContent = prizes.length ? `${remain()} / ${tot}` : '–';
+  $('board').innerHTML = prizes.length ? prizes.map(p => `<div class="prize ${p.remaining ? '' : 'out'}">${badge(p.grade, p.color)}
+    <div><div class="nm">${esc(p.name)}</div><div class="bar"><i style="width:${p.total ? p.remaining / p.total * 100 : 0}%;background:${esc(p.color)}"></i></div></div>
+    <div class="cnt"><b>${p.remaining}</b><small> / ${p.total}</small></div></div>`).join('')
+    : '<div class="empty">아직 상품이 세팅되지 않았어요</div>';
+  $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>
+    <b>${S.last_one_winner_name ? esc(S.last_one_winner_name) + ' 당첨!' : '마지막 한 장을 뽑은 사람에게'}</b></div>` : '';
+}
+
+function renderWho() {
+  const sel = $('who'), cur = sel.value;
+  const list = [...members].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  sel.innerHTML = '<option value="">닉네임을 선택하세요</option>' + list.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+  let v = cur;
+  if (!v) { try { v = localStorage.getItem('kuji-who') || ''; } catch (e) {} }
+  sel.value = list.some(m => m.id === v) ? v : '';
+  renderMine();
+}
+
+function renderMine() {
+  const m = me(), cost = S?.cost || 0, cnt = $('count');
+  let max = 0, msg = '';
+  if (m) {
+    max = cost ? Math.min(Math.floor(m.points / cost), remain(), 50) : 0;
+    $('myPts').innerHTML = `<span>보유 <b>${m.points.toLocaleString()}</b> GP</span><span>뽑기 가능 <b>${max}</b>회</span>`;
+    $('pinLabel').textContent = m.has_pin ? '비밀번호 4자리' : '처음이야! 앞으로 쓸 비밀번호 4자리 정하기';
+    $('pinHint').textContent = m.has_pin ? '처음 뽑을 때 정한 숫자예요. 잊었으면 관리자에게 초기화 요청!' : '이 숫자를 기억해 둬요. 다음부터 이걸로 뽑아요.';
+  } else $('myPts').innerHTML = '';
+  if (prizes.length && !remain()) msg = '쿠지가 전부 소진됐어요!';
+  const keep = +cnt.value || 1;
+  cnt.innerHTML = max ? Array.from({length: max}, (_, i) => `<option value="${i + 1}">${i + 1}장 (${((i + 1) * cost).toLocaleString()} GP)</option>`).join('') : '<option value="">—</option>';
+  if (max) cnt.value = String(Math.min(keep, max));
+  if (!busy) $('drawErr').textContent = msg;
+  $('drawBtn').disabled = busy || !m || !max || !photoFile || !/^\d{4}$/.test($('pin').value) || !!msg;
+}
+
+function renderFeed() {
+  $('feed').innerHTML = draws.length ? draws.map(d => `<div class="fr">
+    <img src="${esc(photoUrl(d.photo))}" alt="${esc(d.name)} 인증 사진" data-full="${esc(photoUrl(d.photo))}" loading="lazy">
+    <div><b>${esc(d.name)}</b> <time>${fmtTime(d.created_at)}</time>
+    <div class="chips">${(d.results || []).map(r => `<span class="chip" style="background:${esc(r.color)}">${esc(r.grade)} ${esc(r.name)}</span>`).join('')}</div></div></div>`).join('')
+    : '<div class="empty">아직 뽑은 사람이 없어요</div>';
+}
+
+async function load() {
+  const [a, b, c, d] = await Promise.all([
+    sb.from('settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('prizes').select('*').order('sort').order('id'),
+    sb.from('members').select('id,name,points,has_pin'),
+    sb.from('draws').select('*').order('created_at', {ascending: false}).limit(40)
+  ]);
+  const err = a.error || b.error || c.error || d.error;
+  if (err) { $('status').textContent = '불러오지 못했어요: ' + errMsg(err); $('status').hidden = false; return; }
+  S = a.data; prizes = b.data; members = c.data; draws = d.data;
+  $('status').hidden = true;
+  renderBoard(); renderWho(); renderFeed();
+}
+
+// 사진은 1280px로 줄여서 올림 (용량 절약)
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const s = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85)) || file;
+  } catch (e) { return file; }
+}
+
+async function doDraw() {
+  const m = me(), n = +$('count').value, pin = $('pin').value;
+  if (!m || !n || !photoFile) return;
+  busy = true; $('drawErr').textContent = ''; $('drawBtn').textContent = '뽑는 중…'; renderMine();
+  try {
+    const blob = await shrink(photoFile);
+    const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+    const up = await sb.storage.from('proofs').upload(path, blob, {contentType: blob.type || 'image/jpeg'});
+    if (up.error) throw new Error('사진 업로드 실패: ' + errMsg(up.error));
+    const {data, error} = await sb.rpc('draw_kuji', {p_member: m.id, p_pin: pin, p_count: n, p_photo: path});
+    if (error) throw error;
+    try { localStorage.setItem('kuji-who', m.id); } catch (e) {}
+    showTickets(data.results);
+    if (data.count < n) toast(`${data.count}장만 뽑혔어요 (남은 수량 부족)`);
+    photoFile = null; $('photo').value = ''; $('dropT').textContent = '탭해서 사진 올리기'; $('dropL').querySelector('img')?.remove();
+    await load();
+  } catch (e) {
+    $('drawErr').textContent = errMsg(e);
+  } finally {
+    busy = false; $('drawBtn').textContent = '쿠지 뽑기'; renderMine();
+  }
+}
+
+function showTickets(rs) {
+  $('resultBox').hidden = false;
+  $('tickets').innerHTML = rs.map((r, i) => `<button class="tk" aria-label="${i + 1}번 티켓 열기"><div class="in">
+    <div class="f">${r.last ? 'LAST' : '뜯기'}</div><div class="b">${badge(r.grade, r.color)}<small>${esc(r.name)}</small></div></div></button>`).join('');
+  $('resultBox').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+$('who').addEventListener('change', () => { renderMine(); try { localStorage.setItem('kuji-who', $('who').value); } catch (e) {} });
+$('count').addEventListener('change', renderMine);
+$('pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); renderMine(); });
+$('photo').addEventListener('change', e => {
+  photoFile = e.target.files[0] || null;
+  const L = $('dropL'); L.querySelector('img')?.remove();
+  if (photoFile) { const im = document.createElement('img'); im.src = URL.createObjectURL(photoFile); im.alt = '미리보기'; L.insertBefore(im, $('dropT')); $('dropT').textContent = photoFile.name; }
+  renderMine();
+});
+$('drawBtn').addEventListener('click', doDraw);
+$('tickets').addEventListener('click', e => e.target.closest('.tk')?.classList.add('open'));
+$('openAll').addEventListener('click', () => document.querySelectorAll('.tk').forEach((t, i) => setTimeout(() => t.classList.add('open'), i * 120)));
+$('feed').addEventListener('click', e => { const u = e.target.dataset.full; if (u) { $('modalImg').src = u; $('modal').hidden = false; } });
+$('modal').addEventListener('click', () => $('modal').hidden = true);
+
+if (!ready) { $('setupNote').hidden = false; $('status').hidden = true; }
+else {
+  load();
+  let t;
+  const later = () => { clearTimeout(t); t = setTimeout(() => { if (!busy) load(); }, 400); };
+  sb.channel('kuji').on('postgres_changes', {event: '*', schema: 'public'}, later).subscribe();
+  setInterval(() => { if (!busy && document.visibilityState === 'visible') load(); }, 30000);
+}
+}
+</script>
+</body>
+</html>

@@ -172,8 +172,18 @@ begin
   return jsonb_build_object('results', results, 'count', k, 'spent', k * s.cost);
 end $$;
 
-revoke all on function public.draw_kuji(uuid, text, int, text, int) from public;
-grant execute on function public.draw_kuji(uuid, text, int, text, int) to anon, authenticated;
+-- 뽑기는 서버 함수(kuji-draw)만 호출 가능
+revoke all on function public.draw_kuji(uuid, text, int, text, int) from public, anon, authenticated;
+grant execute on function public.draw_kuji(uuid, text, int, text, int) to service_role;
+
+-- AI 호출 전에 비밀번호부터 확인 (비번 없으면 true = 첫 뽑기)
+create or replace function public.verify_pin(p_member uuid, p_pin text)
+returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce((select pin_hash = crypt(p_pin, pin_hash) from public.member_pins where member_id = p_member), true);
+$$;
+revoke all on function public.verify_pin(uuid, text) from public, anon, authenticated;
+grant execute on function public.verify_pin(uuid, text) to service_role;
 
 -- ---------- 인증 사진 저장소 ----------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

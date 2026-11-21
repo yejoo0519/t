@@ -154,8 +154,15 @@ begin
   select * into m from public.members where id = p_member for update;
   if not found then raise exception '길드원을 찾을 수 없어요'; end if;
 
+  if p_pin is null or p_pin !~ '^[0-9]{4}$' then
+    raise exception '비밀번호는 숫자 4자리로 입력해 주세요';
+  end if;
   select pin_hash into v_hash from public.member_pins where member_id = p_member;
-  if v_hash is null or v_hash <> crypt(coalesce(p_pin, ''), v_hash) then
+  if v_hash is null then
+    -- 비번 없이 뽑기권만 받은 경우(관리자 지급 등): 처음 입력한 숫자를 비번으로 정함
+    insert into public.member_pins (member_id, pin_hash) values (p_member, crypt(p_pin, gen_salt('bf')));
+    update public.members set has_pin = true where id = p_member;
+  elsif v_hash <> crypt(p_pin, v_hash) then
     raise exception '비밀번호가 틀렸어요';
   end if;
   if m.credits < cardinality(p_slots) then

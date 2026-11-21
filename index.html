@@ -47,6 +47,7 @@
       <div class="credit" id="creditBox" hidden>
         <div><small>내 뽑기권</small><b id="creditN">0</b><span>장</span></div>
         <button class="btn big" id="goPick">쿠지 고르러 가기</button>
+        <p class="credit-why" id="pickWhy" hidden></p>
       </div>
 
       <div class="step"><em>3</em><div>
@@ -170,6 +171,10 @@ function renderMine() {
     $('creditN').textContent = m.credits;
     $('goPick').disabled = busy || !pinOk() || !left();
     $('goPick').textContent = pinOk() ? '쿠지 고르러 가기' : '비밀번호 넣고 쿠지 고르기';
+    const why = !size() ? '아직 쿠지판이 없어요. 관리자가 "상품 저장 + 판 새로 만들기"를 눌러야 해요.'
+      : !left() ? '쿠지가 전부 소진됐어요.'
+      : !pinOk() ? (m.has_pin ? '위에 비밀번호 4자리를 넣어줘.' : '위에 앞으로 쓸 비밀번호 4자리를 정해줘.') : '';
+    $('pickWhy').textContent = why; $('pickWhy').hidden = !why;
   } else { $('myPts').innerHTML = ''; $('creditBox').hidden = true; }
   if (size() && !left()) msg = '쿠지가 전부 소진됐어요!';
   if (!busy) $('regErr').textContent = msg;

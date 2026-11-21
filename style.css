@@ -217,7 +217,9 @@ header .btn.ghost{color:#fff;border-color:#fff8}
 .credit>div{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
 .credit small{font-size:13px;color:#b6a6a8;margin-right:4px}
 .credit b{font-family:"Black Han Sans";font-weight:400;font-size:38px;line-height:1;color:var(--gold)}
+.credit{flex-wrap:wrap}
 .credit .btn.big{flex:1;min-height:54px;font-size:19px}
+.credit-why{flex-basis:100%;margin:0;font-size:13px;color:#ffd6cf}
 .chip.wait{background:var(--soft);color:var(--mute);box-shadow:inset 0 0 0 1.5px var(--line)}
 @media(max-width:520px){.credit{flex-direction:column;align-items:stretch;padding:14px}.credit>div{justify-content:center}.vres dl{grid-template-columns:minmax(0,1fr)}}
 

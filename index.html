@@ -88,10 +88,17 @@
       <p class="hint err" id="pickErr"></p>
     </div>
     <div id="revealStage" hidden>
-      <div class="reveal" id="reveal"></div>
+      <div class="stage" id="stage">
+        <div class="fx" id="fx" aria-hidden="true"></div>
+        <div class="stage-prog" id="prog"></div>
+        <div class="tkt-wrap" id="tktWrap"></div>
+        <p class="stage-hint" id="stageHint">쿠지를 탭해서 뜯어줘</p>
+      </div>
+      <div class="summary" id="summary" hidden></div>
       <div class="kbox-f">
-        <button class="btn ghost" id="openAll">한 번에 다 뜯기</button>
-        <button class="btn big" id="stickBtn" disabled>쿠지판에 붙이기</button>
+        <button class="btn ghost" id="skipAll">한 번에 다 뜯기</button>
+        <button class="btn big" id="nextBtn" hidden>다음 쿠지</button>
+        <button class="btn big" id="stickBtn" hidden>쿠지판에 붙이기</button>
       </div>
     </div>
   </div>
@@ -107,7 +114,7 @@
 {
 const {sb, ready, $, esc, art, photoUrl, toast, errMsg, fmtTime} = K;
 let S = null, prizes = [], members = [], draws = [], opened = new Map(), photoFile = null, busy = false;
-let picked = [], fresh = new Set(), revealed = 0, lastResults = [];
+let picked = [], fresh = new Set(), lastResults = [];
 
 const me = () => members.find(m => m.id === $('who').value);
 const size = () => S?.board_size || 0;
@@ -285,20 +292,113 @@ async function doTear() {
   try {
     const {data, error} = await sb.rpc('pick_slots', {p_member: m.id, p_pin: $('pin').value, p_slots: picked});
     if (error) throw error;
-    lastResults = data.results; revealed = 0;
-    $('reveal').innerHTML = lastResults.map((r, i) => `<button class="rv" data-i="${i}" style="--c:${esc(r.color)}" aria-label="${i + 1}번째 쿠지 뜯기">
-      <div class="rv-in"><div class="rv-f"><span class="rv-tab"></span><b>${r.last ? 'LAST' : '?'}</b><small>탭해서 뜯기</small></div>
-      <div class="rv-b">${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}<span class="glogo sm"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<i>상</i>' : ''}</span><p>${esc(r.name)}</p></div></div></button>`).join('');
-    $('pickStage').hidden = true; $('revealStage').hidden = false; $('stickBtn').disabled = true;
+    lastResults = data.results;
+    $('pickStage').hidden = true; $('revealStage').hidden = false; startReveal();
   } catch (e) {
     $('pickErr').textContent = errMsg(e);
     await load();
   } finally { busy = false; if (!$('pickStage').hidden) renderPile(); }
 }
-function tearOne(btn) {
-  if (!btn || btn.classList.contains('open')) return;
-  btn.classList.add('open');
-  if (++revealed >= lastResults.length) $('stickBtn').disabled = false;
+/* ---------- 뜯기 연출 ---------- */
+let cur = 0, phase = 'idle', audio = null;
+const sorted = () => [...prizes].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+function tierOf(r) {
+  if (r.last) return 'top';
+  const list = sorted(), p = list.find(x => x.grade === r.grade && x.name === r.name);
+  if (!p) return 'normal';
+  if (list.indexOf(p) === 0 || p.total === 1) return 'top';
+  return p.total <= 3 ? 'high' : 'normal';
+}
+function sfx(kind) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const ac = audio, t = ac.currentTime;
+    if (kind === 'rip') {
+      const len = 0.28, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 1.5) * (Math.random() < .35 ? 1 : .3);
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = .7; g.gain.value = .5;
+      src.buffer = buf; src.connect(f).connect(g).connect(ac.destination); src.start(t);
+    } else {
+      const notes = kind === 'top' ? [784, 988, 1175, 1568] : kind === 'high' ? [659, 880, 1109] : [523, 784];
+      notes.forEach((fq, i) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'triangle'; o.frequency.value = fq;
+        g.gain.setValueAtTime(0, t + i * .09); g.gain.linearRampToValueAtTime(.18, t + i * .09 + .02); g.gain.exponentialRampToValueAtTime(.001, t + i * .09 + .6);
+        o.connect(g).connect(ac.destination); o.start(t + i * .09); o.stop(t + i * .09 + .7);
+      });
+    }
+  } catch (e) {}
+}
+function bits(n, cls, colors) {
+  let h = '';
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 260;
+    h += `<i class="${cls}" style="--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d - 80}px;--r:${Math.random() * 720 - 360}deg;--d:${(.7 + Math.random() * .8).toFixed(2)}s;--k:${colors[i % colors.length]};--w:${6 + Math.random() * 8}px"></i>`;
+  }
+  return h;
+}
+function ticketHTML(r) {
+  return `<div class="tkt" style="--c:${esc(r.color)}">
+    <div class="tkt-in">
+      <div class="tkt-res">
+        ${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}
+        <span class="glogo sm"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<i>상</i>' : ''}</span>
+        <p class="pname">${esc(r.name)}</p>
+      </div>
+      <div class="tkt-flap"><span class="tkt-seal">쿠지</span><span class="tkt-fold"></span></div>
+      <div class="tkt-strip"><span>여기를 뜯어요</span></div>
+    </div>
+  </div>`;
+}
+function startReveal() {
+  cur = 0; $('summary').hidden = true; $('stage').hidden = false; $('stickBtn').hidden = true; $('skipAll').hidden = false;
+  showTicket();
+}
+function showTicket() {
+  const r = lastResults[cur];
+  phase = 'closed';
+  $('stage').className = 'stage';
+  $('fx').innerHTML = '';
+  $('prog').textContent = `${cur + 1} / ${lastResults.length}`;
+  $('tktWrap').innerHTML = ticketHTML(r);
+  $('stageHint').textContent = '쿠지를 탭해서 뜯어줘';
+  $('nextBtn').hidden = true;
+}
+function tear() {
+  if (phase !== 'closed') return;
+  const r = lastResults[cur], tier = tierOf(r), t = $('tktWrap').firstElementChild;
+  phase = 'busy'; $('stageHint').textContent = '';
+  sfx('rip');
+  t.classList.add('torn');
+  $('fx').insertAdjacentHTML('beforeend', `<div class="fx-bits">${bits(14, 'paper', ['#fff', '#f3efe8', '#e2312f'])}</div>`);
+  const charge = tier === 'top' ? 1100 : tier === 'high' ? 500 : 0;
+  setTimeout(() => {
+    if (charge) { t.classList.add('charge'); $('stage').classList.add('charge-' + tier); }
+    setTimeout(() => {
+      t.classList.remove('charge'); t.classList.add('open');
+      $('stage').classList.add('hit-' + tier);
+      sfx(tier);
+      const colors = ['#f6b81a', '#e2312f', '#fff', r.color, '#2f9e5a', '#1f7ae0'];
+      $('fx').insertAdjacentHTML('beforeend', `<div class="fx-rays"></div><div class="fx-flash"></div>`
+        + (tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 70 : 30, 'conf', colors)}</div>` : `<div class="fx-bits">${bits(10, 'spark', ['#fff', '#f6b81a'])}</div>`)
+        + (tier === 'top' ? `<div class="fx-banner"><span>대박!</span></div>` : ''));
+      setTimeout(() => {
+        phase = 'open';
+        if (cur < lastResults.length - 1) { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠지 (${cur + 2}/${lastResults.length})`; $('stageHint').textContent = ''; }
+        else showSummary(900);
+      }, 700);
+    }, charge);
+  }, 380);
+}
+function showSummary(delay = 0) {
+  setTimeout(() => {
+    $('stage').hidden = true; $('nextBtn').hidden = true; $('skipAll').hidden = true;
+    $('summary').innerHTML = `<h3>이번에 뽑은 쿠지</h3><div class="sum-grid">${lastResults.map(r => `<div class="sum ${tierOf(r)}" style="--c:${esc(r.color)}">
+      ${r.image ? `<img src="${esc(r.image)}" alt="">` : `<b class="bigL">${esc(letter(r.grade))}</b>`}
+      <span class="glogo sm"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<i>상</i>' : ''}</span><p>${esc(r.name)}</p></div>`).join('')}</div>`;
+    $('summary').hidden = false; $('stickBtn').hidden = false;
+  }, delay);
 }
 async function stick() {
   fresh = new Set(lastResults.filter(r => r.no).map(r => r.no));
@@ -334,8 +434,9 @@ $('pickRand').addEventListener('click', () => {
   renderPile();
 });
 $('tearBtn').addEventListener('click', doTear);
-$('reveal').addEventListener('click', e => tearOne(e.target.closest('.rv')));
-$('openAll').addEventListener('click', () => document.querySelectorAll('.rv:not(.open)').forEach((b, i) => setTimeout(() => tearOne(b), i * 350)));
+$('tktWrap').addEventListener('click', tear);
+$('nextBtn').addEventListener('click', () => { if (phase === 'open') { cur++; showTicket(); } });
+$('skipAll').addEventListener('click', () => { phase = 'done'; showSummary(); });
 $('stickBtn').addEventListener('click', stick);
 $('feed').addEventListener('click', e => { const u = e.target.dataset.full; if (u) { $('modalImg').src = u; $('modal').hidden = false; } });
 $('modal').addEventListener('click', () => $('modal').hidden = true);

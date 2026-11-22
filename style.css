@@ -602,3 +602,26 @@ button.cp:hover{transform:translateY(-2px)}
 .ilist li.soldout{opacity:.45;text-decoration:line-through}
 .pr-name .ilist{justify-content:flex-start;margin:6px 0 0}
 @media(max-width:640px){.multi{width:130px;height:108px}.multi img{max-width:60px;max-height:52px}.ilist li{font-size:11px}}
+
+/* 대표 경품(맨 첫 등급) — 판 맨 위 전체 폭 */
+.pc.hero{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"art name" "art list" "art paste";align-content:center;column-gap:20px;
+  padding:6px 4px 14px;border-bottom:2px dashed rgba(255,255,255,.45);margin-bottom:6px}
+.pc.hero .pc-art{grid-area:art;height:300px}
+.pc.hero .pc-art img{width:230px;height:230px}
+.pc.hero .multi{width:300px;height:250px}.pc.hero .multi img{max-width:140px;max-height:118px}
+.pc.hero .bigL{font-size:180px;-webkit-text-stroke:9px var(--c)}
+.pc.hero .glogo b{font-size:120px;-webkit-text-stroke:12px #fff}.pc.hero .glogo i{font-size:52px;-webkit-text-stroke:8px #fff}
+.pc.hero .seal{width:110px;height:110px;right:6%;top:4%}.pc.hero .seal b{font-size:42px}.pc.hero .seal small,.pc.hero .seal em{font-size:13px}
+.pc.hero .pname{grid-area:name;align-self:end;text-align:left;font-size:clamp(28px,3.6vw,40px);-webkit-text-stroke:5px var(--c)}
+.pc.hero .ilist{grid-area:list;justify-content:flex-start;align-self:start;align-items:center;margin:10px 0 0}
+.pc.hero .ilist li{font-size:14px;padding:5px 12px 5px 5px}.pc.hero .ilist li img{width:30px;height:30px}
+.pc.hero .paste{grid-area:paste;align-self:start;margin:12px 0 0}
+.pc.hero .stamp{font-size:40px;padding:8px 26px}
+@media(max-width:720px){
+  .pc.hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"art" "name" "list" "paste"}
+  .pc.hero .pc-art{height:220px}.pc.hero .pc-art img{width:160px;height:160px}
+  .pc.hero .multi{width:220px;height:180px}.pc.hero .multi img{max-width:100px;max-height:84px}
+  .pc.hero .glogo b{font-size:84px;-webkit-text-stroke:10px #fff}.pc.hero .glogo i{font-size:36px}
+  .pc.hero .seal{width:84px;height:84px}.pc.hero .seal b{font-size:32px}
+  .pc.hero .pname{text-align:center;font-size:26px}.pc.hero .ilist{justify-content:center}
+}

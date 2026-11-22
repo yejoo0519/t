@@ -158,8 +158,10 @@ function renderBoard() {
     const one = imgs[0]?.image || p.image;
     return one ? `<img src="${esc(one)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`;
   };
-  const big = prizes.filter(p => p.total <= 3), small = prizes.filter(p => p.total > 3);
-  $('popTop').innerHTML = big.map(p => `<div class="pc ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
+  const ord = [...prizes].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || String(a.grade).localeCompare(String(b.grade)));
+  const head = ord[0], rest = ord.slice(1);
+  const big = [head, ...rest.filter(p => p.total <= 3)].filter(Boolean), small = rest.filter(p => p.total > 3);
+  $('popTop').innerHTML = big.map(p => `<div class="pc ${p === head ? 'hero' : ''} ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
     <div class="pc-art">${art(p)}${logo(p)}${count(p)}${done(p)}</div>
     <p class="pname">${esc(p.name)}</p>${ilist(p)}
     <div class="paste light">${tix(p)}</div></div>`).join('');

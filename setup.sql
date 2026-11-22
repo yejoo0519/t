@@ -263,7 +263,8 @@ begin
   if s.last_one_name <> '' and s.last_one_winner is null
      and not exists (select 1 from public.slots where not opened) then
     update public.settings set last_one_winner = p_member, last_one_winner_name = m.name where id = 1;
-    v_results := v_results || jsonb_build_object('grade', '라스트원', 'name', s.last_one_name, 'color', '#1b1416', 'last', true);
+    v_results := v_results || jsonb_build_object('grade', '라스트원', 'name', s.last_one_name, 'color', '#1b1416', 'last', true,
+      'code', (select value from public.kuji_secrets where key = 'last_one_code'));
   end if;
 
   update public.members set credits = credits - k where id = p_member;
@@ -331,6 +332,12 @@ delete from public.item_codes a
 do $$ begin
   create unique index if not exists item_codes_item_code_uq on public.item_codes (item_id, code);
 exception when others then null; end $$;
+
+-- 라스트원 코드 등 비공개 값 (관리자만 읽기/쓰기)
+create table if not exists public.kuji_secrets (key text primary key, value text);
+alter table public.kuji_secrets enable row level security;
+drop policy if exists "admin" on public.kuji_secrets;
+create policy "admin" on public.kuji_secrets for all using (public.is_admin()) with check (public.is_admin());
 
 -- 아이템별 남은 수량 (코드가 하나도 없으면 무제한 = null)
 create or replace function public.item_stock()
@@ -408,6 +415,11 @@ begin
       'code', (select c.code from public.item_codes c where c.claimed_slot_uid = s.uid limit 1)
     ) order by s.opened_at desc)
     from public.slots s where s.opened and s.opened_by = p_member), '[]'::jsonb)
+  -- 라스트원 당첨
+  || coalesce((
+    select jsonb_build_array(jsonb_build_object('last', true, 'grade', '라스트원', 'name', st.last_one_name, 'item_name', st.last_one_name,
+             'color', '#1b1416', 'code', (select value from public.kuji_secrets where key = 'last_one_code')))
+    from public.settings st where st.id = 1 and st.last_one_winner = p_member and st.last_one_name <> ''), '[]'::jsonb)
   -- 지난 판에서 받은 코드
   || coalesce((
     select jsonb_agg(jsonb_build_object('past', true, 'item_name', i.name, 'code', c.code, 'opened_at', c.claimed_at) order by c.claimed_at desc)

@@ -34,6 +34,7 @@
         <label for="aTitle">쿠지 이름</label><input type="text" id="aTitle">
         <label for="aCost" style="margin-top:12px">1회당 필요 GP (늘어난 GP 기준)</label><input type="number" id="aCost" min="1">
         <label for="aLast" style="margin-top:12px">라스트원 상품 (비우면 없음 · 드래곤 이름이면 이미지 자동)</label><input type="text" id="aLast" list="dragonList"><div class="pv" id="lastPv"></div>
+        <label for="aLastCode" style="margin-top:12px">라스트원 코드 (당첨자만 볼 수 있음 · 비우면 코드 없음)</label><input type="text" id="aLastCode" autocomplete="off" placeholder="예: LAST-ABCD-1234">
         <p class="hint" id="lastInfo"></p>
         <button class="btn" id="saveCfg" style="margin-top:12px">설정 저장</button>
       </div>
@@ -114,6 +115,8 @@ async function load() {
   edit = prizes.map(p => ({...p}));
   $('aTitle').value = S.title; $('aCost').value = S.cost; $('aLast').value = S.last_one_name;
   $('lastPv').innerHTML = pv(S.last_one_name);
+  const sec = await sb.from('kuji_secrets').select('value').eq('key', 'last_one_code').maybeSingle();
+  $('aLastCode').value = sec.data?.value || '';
   $('lastInfo').textContent = S.last_one_winner_name ? `라스트원 당첨: ${S.last_one_winner_name}` : '';
   const {count: openedCnt} = await sb.from('slots').select('no', {count: 'exact', head: true}).eq('opened', true);
   S.opened = openedCnt || 0;
@@ -236,6 +239,9 @@ $('logout').addEventListener('click', async () => { await sb.auth.signOut(); che
 $('aLast').addEventListener('input', () => { $('lastPv').innerHTML = pv($('aLast').value); });
 $('saveCfg').addEventListener('click', async () => {
   const cost = Math.max(1, parseInt($('aCost').value, 10) || 1);
+  const lc = $('aLastCode').value.trim();
+  const sr = lc ? await sb.from('kuji_secrets').upsert({key: 'last_one_code', value: lc}) : await sb.from('kuji_secrets').delete().eq('key', 'last_one_code');
+  if (sr.error) { toast('라스트원 코드 저장 실패: ' + errMsg(sr.error)); return; }
   if (await run(sb.from('settings').update({title: $('aTitle').value.trim() || '길드 쿠지', cost, last_one_name: $('aLast').value.trim()}).eq('id', 1), '설정 저장')) load();
 });
 

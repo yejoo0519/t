@@ -460,14 +460,15 @@ function showResult(r, tier) {
       ${tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 60 : 24, 'conf', ['#f6b81a', '#fff', r.color, '#7be0ff'])}</div>` : ''}
     </div>
     <p class="res-name">${esc(r.grade)} · ${esc(r.name)}</p>
+    ${r.last && r.code ? codeBox({item_name: r.name, code: r.code}) : ''}
     ${r.no && itemsOf(prizeIdOf(r)).length ? pickerHTML(r.no, prizeIdOf(r)) : ''}
   </div>`;
   $('result').hidden = false;
   phase = 'open';
   if (cur < lastResults.length - 1) {
-    if (autoAll && !$('result').querySelector('.ipick')) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
+    if (autoAll && !$('result').querySelector('.ipick, .codebox')) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
     else { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠폰 (${cur + 2}/${lastResults.length})`; }
-  } else if (!$('result').querySelector('.ipick')) setTimeout(showSummary, autoAll ? 1600 : 1800);
+  } else if (!$('result').querySelector('.ipick, .codebox')) setTimeout(showSummary, autoAll ? 1600 : 1800);
   else { $('nextBtn').hidden = false; $('nextBtn').textContent = '결과 모아보기'; }
 }
 $('tktWrap').addEventListener('pointerdown', e => {
@@ -549,8 +550,8 @@ async function openWins() {
   if (error) { $('winsList').innerHTML = `<p class="ki-err">${esc(errMsg(error))}</p>`; return; }
   const cur = data.filter(w => !w.past), past = data.filter(w => w.past);
   $('winsList').innerHTML = (cur.length ? cur.map(w => `<div class="win" style="--c:${esc(w.color)}">
-      <div class="win-h">${w.image ? `<img src="${esc(w.image)}" alt="">` : ''}<span class="gold-g"><b>${esc(letter(w.grade))}</b><small>상</small></span><span class="win-nm">${esc(w.name)}</span><span class="win-no">${w.no}번</span></div>
-      ${w.item_name ? codeBox(w) : itemsOf(w.prize_id).length ? pickerHTML(w.no, w.prize_id) : ''}
+      <div class="win-h">${w.image ? `<img src="${esc(w.image)}" alt="">` : ''}<span class="gold-g"><b>${esc(letter(w.grade))}</b><small>상</small></span><span class="win-nm">${esc(w.name)}</span><span class="win-no">${w.last ? 'LAST ONE' : w.no + '번'}</span></div>
+      ${w.item_name ? codeBox(w) : w.prize_id && itemsOf(w.prize_id).length ? pickerHTML(w.no, w.prize_id) : ''}
     </div>`).join('') : '<p class="wins-empty">이번 판에서 뽑은 쿠폰이 아직 없어요.</p>')
     + (past.length ? `<h3 class="wins-past">지난 판에서 받은 코드</h3>` + past.map(w => `<div class="win past">${codeBox(w)}</div>`).join('') : '');
 }

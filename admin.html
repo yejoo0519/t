@@ -167,24 +167,33 @@ $('itEdit').addEventListener('click', e => {
   if (x.used && !confirm2(b, '지급 기록도 삭제?')) return;
   itEdit.splice(+b.closest('.itrow').dataset.i, 1); drawItems();
 });
+let itBusy = false;
 $('itSave').addEventListener('click', async () => {
-  const pid = $('itPrize').value; if (!pid) return;
-  const keep = itEdit.filter(x => x.name.trim());
-  const gone = allItems.filter(x => x.prize_id === pid && !keep.some(k => k.id === x.id)).map(x => x.id);
-  if (gone.length && !await run(sb.from('prize_items').delete().in('id', gone))) return;
-  for (const [i, x] of keep.entries()) {
-    const row = {prize_id: pid, name: x.name.trim(), image: findDragon(x.name)?.url || null, sort: i};
-    let id = x.id;
-    if (id) { if (!await run(sb.from('prize_items').update(row).eq('id', id))) return; }
-    else { const r = await sb.from('prize_items').insert(row).select('id').single(); if (r.error) { toast('실패: ' + errMsg(r.error)); return; } id = r.data.id; }
-    const want = [...new Set((x.codes || '').split('\n').map(s => s.trim()).filter(Boolean))];
-    const have = allCodes.filter(c => c.item_id === id && !c.claimed_slot_uid);
-    const del = have.filter(c => !want.includes(c.code)).map(c => c.id);
-    const add = want.filter(w => !have.some(c => c.code === w)).map(code => ({item_id: id, code}));
-    if (del.length && !await run(sb.from('item_codes').delete().in('id', del))) return;
-    if (add.length && !await run(sb.from('item_codes').insert(add))) return;
+  const pid = $('itPrize').value; if (!pid || itBusy) return;
+  itBusy = true; $('itSave').disabled = true; $('itSave').textContent = '저장 중…';
+  try {
+    const keep = itEdit.filter(x => x.name.trim());
+    const gone = allItems.filter(x => x.prize_id === pid && !keep.some(k => k.id === x.id)).map(x => x.id);
+    if (gone.length && !await run(sb.from('prize_items').delete().in('id', gone))) return;
+    for (const [i, x] of keep.entries()) {
+      const row = {prize_id: pid, name: x.name.trim(), image: findDragon(x.name)?.url || null, sort: i};
+      if (x.id) { if (!await run(sb.from('prize_items').update(row).eq('id', x.id))) return; }
+      else { const r = await sb.from('prize_items').insert(row).select('id').single(); if (r.error) { toast('실패: ' + errMsg(r.error)); return; } x.id = r.data.id; }
+      const want = [...new Set((x.codes || '').split('\n').map(s => s.trim()).filter(Boolean))];
+      // DB에서 지금 남은(미지급) 코드를 새로 읽어서 비교
+      const cur = await sb.from('item_codes').select('id,code').eq('item_id', x.id).is('claimed_slot_uid', null);
+      if (cur.error) { toast('실패: ' + errMsg(cur.error)); return; }
+      const seen = new Set(), del = [];
+      for (const c of cur.data) { if (!want.includes(c.code) || seen.has(c.code)) del.push(c.id); else seen.add(c.code); }
+      const add = want.filter(w => !seen.has(w)).map(code => ({item_id: x.id, code}));
+      if (del.length && !await run(sb.from('item_codes').delete().in('id', del))) return;
+      if (add.length && !await run(sb.from('item_codes').upsert(add, {onConflict: 'item_id,code', ignoreDuplicates: true}))) return;
+    }
+    toast('아이템 저장');
+  } finally {
+    itBusy = false; $('itSave').disabled = false; $('itSave').textContent = '아이템 저장';
+    await loadItems();
   }
-  toast('아이템 저장'); await loadItems();
 });
 
 function pv(name) {

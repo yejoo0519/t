@@ -149,13 +149,22 @@ function renderBoard() {
   const count = p => `<div class="seal ${p.remaining ? '' : 'zero'}" aria-label="남은 ${p.remaining}장 / ${p.total}장"><div><small>남은</small><b>${p.remaining}</b><em>/ ${p.total}장</em></div></div>`;
   const done = p => p.remaining ? '' : '<span class="stamp">종료</span>';
   const logo = p => `<span class="glogo"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>`;
+  const its = p => items.filter(i => i.prize_id === p.id);
+  const ilist = p => its(p).length ? `<ul class="ilist">${its(p).map(i => { const l = stock.get(i.id);
+      return `<li class="${l === 0 ? 'soldout' : ''}">${i.image ? `<img src="${esc(i.image)}" alt="">` : ''}<span>${esc(i.name)}</span>${l == null ? '' : l === 0 ? '<small>품절</small>' : `<small>${l}</small>`}</li>`; }).join('')}</ul>` : '';
+  const art = p => {
+    const imgs = its(p).filter(i => i.image).slice(0, 4);
+    if (imgs.length > 1) return `<div class="multi n${imgs.length}">${imgs.map(i => `<img src="${esc(i.image)}" alt="">`).join('')}</div>`;
+    const one = imgs[0]?.image || p.image;
+    return one ? `<img src="${esc(one)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`;
+  };
   const big = prizes.filter(p => p.total <= 3), small = prizes.filter(p => p.total > 3);
   $('popTop').innerHTML = big.map(p => `<div class="pc ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pc-art">${p.image ? `<img src="${esc(p.image)}" alt="">` : `<b class="bigL">${esc(letter(p.grade))}</b>`}${logo(p)}${count(p)}${done(p)}</div>
-    <p class="pname">${esc(p.name)}</p>
+    <div class="pc-art">${art(p)}${logo(p)}${count(p)}${done(p)}</div>
+    <p class="pname">${esc(p.name)}</p>${ilist(p)}
     <div class="paste light">${tix(p)}</div></div>`).join('');
   $('popRows').innerHTML = small.map(p => `<div class="pr ${p.remaining ? '' : 'out'}" style="--c:${esc(p.color)}">
-    <div class="pr-l">${logo(p)}<div class="pr-name">${p.image ? `<img src="${esc(p.image)}" alt="">` : ''}<p class="pname">${esc(p.name)}</p></div></div>
+    <div class="pr-l">${logo(p)}<div class="pr-name">${its(p).length ? '' : p.image ? `<img src="${esc(p.image)}" alt="">` : ''}<p class="pname">${esc(p.name)}</p>${ilist(p)}</div></div>
     <div class="pr-b"><div class="paste">${tix(p)}</div>${count(p)}</div>
     ${done(p)}</div>`).join('');
   $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>

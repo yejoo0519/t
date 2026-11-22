@@ -588,3 +588,17 @@ button.cp:hover{transform:translateY(-2px)}
 .itrow{padding:10px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--bg)}
 .itrow-h{display:flex;gap:6px;align-items:center}
 .itrow textarea{min-height:90px;margin-top:6px;font-family:ui-monospace,Menlo,monospace;font-size:14px}
+
+/* 같은 등급 여러 상품 */
+.multi{display:grid;gap:4px;width:180px;height:150px;grid-template-columns:1fr 1fr;place-items:center}
+.multi.n2{grid-template-rows:1fr;height:110px}
+.multi.n3 img:first-child{grid-column:1/-1}
+.multi img{width:100%;height:100%;max-width:84px;max-height:72px;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(0,0,0,.4))}
+.ilist{list-style:none;display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin:6px 6px 0;padding:0}
+.ilist li{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:3px 9px 3px 4px;border-radius:999px;background:#fff;color:var(--ink);font-size:12px;font-weight:800;box-shadow:0 0 0 2px var(--c)}
+.ilist li img{width:22px;height:22px;object-fit:contain}
+.ilist li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ilist li small{padding:1px 6px;border-radius:999px;background:var(--soft);font-size:11px}
+.ilist li.soldout{opacity:.45;text-decoration:line-through}
+.pr-name .ilist{justify-content:flex-start;margin:6px 0 0}
+@media(max-width:640px){.multi{width:130px;height:108px}.multi img{max-width:60px;max-height:52px}.ilist li{font-size:11px}}

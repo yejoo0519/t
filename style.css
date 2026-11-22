@@ -625,3 +625,6 @@ button.cp:hover{transform:translateY(-2px)}
   .pc.hero .seal{width:84px;height:84px}.pc.hero .seal b{font-size:32px}
   .pc.hero .pname{text-align:center;font-size:26px}.pc.hero .ilist{justify-content:center}
 }
+.cb-warn{margin:10px auto 0;display:inline-block;padding:6px 14px;border-radius:999px;background:#e2312f;color:#fff;font-weight:800;font-size:14px;box-shadow:0 3px 0 #9c1a1f;animation:warnpulse 1.6s ease-in-out infinite}
+@keyframes warnpulse{50%{transform:scale(1.04)}}
+@media(prefers-reduced-motion:reduce){.cb-warn{animation:none}}

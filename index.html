@@ -495,7 +495,7 @@ const prizeIdOf = r => r.prize_id || prizes.find(p => p.grade === r.grade && p.n
 const itemsOf = pid => items.filter(i => i.prize_id === pid);
 function codeBox(res) {
   return `<div class="codebox"><small>받은 아이템</small><b class="cb-item">${esc(res.item_name)}</b>
-    ${res.code ? `<div class="cb-code"><code>${esc(res.code)}</code><button class="cb-copy" data-code="${esc(res.code)}">복사</button></div><p class="cb-note">이 코드는 나만 볼 수 있어요. 내 당첨에서 다시 볼 수 있어요.</p>`
+    ${res.code ? `<div class="cb-code"><code>${esc(res.code)}</code><button class="cb-copy" data-code="${esc(res.code)}">복사</button></div><p class="cb-warn">⚠️ 코드는 받은 즉시 바로 사용해 주세요!</p><p class="cb-note">이 코드는 나만 볼 수 있어요. 내 당첨에서 다시 볼 수 있어요.</p>`
       : `<p class="cb-note">코드 없는 아이템이에요. 관리자가 지급해줄 거예요.</p>`}</div>`;
 }
 function pickerHTML(slotNo, pid) {

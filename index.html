@@ -70,36 +70,32 @@
   <p style="margin-top:28px;font-size:14px"><a href="admin.html">관리자</a></p>
 </div></main>
 
-<!-- 쿠지 박스: 직접 골라서 뽑기 -->
+<!-- 쿠지 키오스크: 쿠폰 선택 → 쿠폰 오픈 → 결과 -->
 <div class="kmodal" id="pickModal" hidden role="dialog" aria-modal="true" aria-labelledby="pickTitle">
-  <div class="kbox">
-    <div class="kbox-h">
-      <div><h2 id="pickTitle">쿠지 고르기</h2><p id="pickInfo"></p></div>
-      <button class="kx" id="pickClose" aria-label="닫기">✕</button>
-    </div>
+  <div class="kbox kiosk">
+    <button class="kx" id="pickClose" aria-label="닫기">✕</button>
     <div id="pickStage">
+      <div class="ki-head">
+        <h2 id="pickTitle">쿠폰을 선택한 뒤 아래의 <em>'시작'</em>을 눌러주세요.</h2>
+        <p>선택한 쿠폰을 다시 터치하면 선택을 취소할 수 있습니다.</p>
+      </div>
+      <div class="ki-count"><span id="pickCount"></span><button class="ki-rand" id="pickRand">랜덤 선택</button></div>
       <div class="stock" id="stock"></div>
       <div class="pile" id="pile"></div>
-      <div class="kbox-f">
-        <span id="pickCount">0 / 0</span>
-        <button class="btn ghost" id="pickRand">아무거나 골라줘</button>
-        <button class="btn big" id="tearBtn" disabled>골라서 뜯기</button>
-      </div>
-      <p class="hint err" id="pickErr"></p>
+      <p class="ki-err" id="pickErr"></p>
+      <div class="ki-foot"><button class="ki-go" id="tearBtn" disabled>시작</button></div>
     </div>
     <div id="revealStage" hidden>
       <div class="stage" id="stage">
         <div class="fx" id="fx" aria-hidden="true"></div>
+        <p class="ki-ins" id="stageHint"></p>
+        <div class="tkt-wrap" id="tktWrap" tabindex="0" aria-label="쿠폰. 엔터를 누르면 오픈해요"></div>
         <div class="stage-prog" id="prog"></div>
-        <div class="tkt-wrap" id="tktWrap" tabindex="0" aria-label="쿠지. 엔터를 누르면 뜯고 펼쳐요"></div>
-        <p class="stage-hint" id="stageHint">쿠지를 탭해서 뜯어줘</p>
+        <div class="ki-btns" id="openBtns"><button class="ki-open" id="openBtn">쿠폰 오픈</button><button class="ki-auto" id="autoBtn">자동 오픈</button></div>
       </div>
+      <div class="result" id="result" hidden></div>
       <div class="summary" id="summary" hidden></div>
-      <div class="kbox-f">
-        <button class="btn ghost" id="skipAll">한 번에 다 뜯기</button>
-        <button class="btn big" id="nextBtn" hidden>다음 쿠지</button>
-        <button class="btn big" id="stickBtn" hidden>쿠지판에 붙이기</button>
-      </div>
+      <div class="ki-foot"><button class="ki-go" id="nextBtn" hidden>다음 쿠폰</button><button class="ki-go" id="stickBtn" hidden>쿠지판에 붙이기</button></div>
     </div>
   </div>
 </div>
@@ -263,19 +259,19 @@ function unopenedNos() { const a = []; for (let n = 1; n <= size(); n++) if (!op
 function renderPile() {
   const m = me(), cap = Math.min(m?.credits || 0, left());
   picked = picked.filter(n => !opened.has(n)).slice(0, cap);
-  $('pickInfo').textContent = `뽑기권 ${m?.credits || 0}장 — 원하는 번호를 ${cap}장까지 골라줘`;
-  $('stock').innerHTML = `<div class="stock-n"><small>남은 쿠지</small><b>${left()}</b><span>/ ${size()}</span></div>
+  $('pickCount').innerHTML = `<b>${picked.length}</b>/${cap}개의 쿠폰이 선택되었습니다.`;
+  $('stock').innerHTML = `<div class="stock-n"><small>남은 쿠폰</small><b>${left()}</b><span>/ ${size()}</span></div>
     <div class="stock-list">${prizes.map(p => `<span class="stk ${p.remaining ? '' : 'zero'}" style="--c:${esc(p.color)}"><i>${esc(letter(p.grade))}</i><em>${esc(p.name)}</em><b>${p.remaining}</b></span>`).join('')}</div>`;
   let h = '';
   for (let n = 1; n <= size(); n++) {
-    if (opened.has(n)) { h += `<div class="kc done" aria-label="${n}번 뽑힘"><span class="kc-no">${n}</span><span class="kc-st">완</span></div>`; continue; }
+    const o = opened.get(n);
+    if (o) { h += `<div class="cp done" title="${esc(o.grade)} ${esc(o.name)} · ${esc(o.opened_name)}"><span class="cp-g"><b>${esc(letter(o.grade))}</b><small>상</small></span></div>`; continue; }
     const i = picked.indexOf(n);
-    h += `<button class="kc ${i >= 0 ? 'on' : ''}" data-n="${n}" aria-pressed="${i >= 0}" aria-label="${n}번 쿠지"><span class="kc-no">${n}</span>${i >= 0 ? `<em>${i + 1}</em>` : ''}</button>`;
+    h += `<button class="cp ${i >= 0 ? 'on' : ''}" data-n="${n}" aria-pressed="${i >= 0}" aria-label="${n}번 쿠폰"><span class="cp-tab"><i></i></span><span class="cp-logo"><span>쿠지</span></span><span class="cp-bar"></span>${i >= 0 ? `<em>${i + 1}</em>` : ''}</button>`;
   }
   $('pile').innerHTML = h;
-  $('pickCount').innerHTML = `<b>${picked.length}</b> / ${cap}장 고름`;
   $('tearBtn').disabled = busy || !picked.length;
-  $('tearBtn').textContent = picked.length ? `${picked.length}장 뜯기` : '골라서 뜯기';
+  $('tearBtn').textContent = busy ? '잠시만요…' : '시작';
 }
 function openPick() {
   const m = me(); if (!m || !m.credits || !pinOk()) return;
@@ -288,7 +284,7 @@ function closePick() { $('pickModal').hidden = true; document.body.style.overflo
 
 async function doTear() {
   const m = me(); if (!m || !picked.length) return;
-  busy = true; $('tearBtn').disabled = true; $('tearBtn').textContent = '뜯는 중…'; $('pickErr').textContent = '';
+  busy = true; $('tearBtn').disabled = true; $('tearBtn').textContent = '잠시만요…'; $('pickErr').textContent = '';
   try {
     const {data, error} = await sb.rpc('pick_slots', {p_member: m.id, p_pin: $('pin').value, p_slots: picked});
     if (error) throw error;
@@ -346,128 +342,125 @@ function bits(n, cls, colors) {
   }
   return h;
 }
-function ticketHTML(r) {
-  return `<div class="tkt" style="--c:${esc(r.color)};--p:0;--o:0">
-    <div class="tkt-in">
-      <div class="tkt-res">
-        ${r.image ? `<img src="${esc(r.image)}" alt="">` : ''}
-        <span class="glogo sm"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<i>상</i>' : ''}</span>
-        <p class="pname">${esc(r.name)}</p>
-      </div>
-      <div class="tkt-flap"><span class="tkt-seal">쿠지</span><span class="flap-hint">↑ 위로 쭉 펼치기</span></div>
-      <div class="tkt-strip" aria-label="절취선을 잡고 오른쪽으로 끌어서 뜯기">
-        <div class="strip-rest"><span>잡고 쭉 뜯기 →</span></div>
-        <div class="strip-peel"></div>
-        <div class="strip-grip"></div>
-      </div>
+const gl = r => `<span class="gold-g"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<small>상</small>' : ''}</span>`;
+function couponHTML(r) {
+  return `<div class="cpn" style="--c:${esc(r.color)};--p:0">
+    <div class="cpn-under">${r.last ? '<span class="cpn-last">LAST ONE</span>' : ''}${gl(r)}</div>
+    <div class="cpn-cover">
+      <span class="cpn-logo"><span>쿠지</span></span>
+      <span class="cpn-title">${esc(S?.title || '길드 쿠지')}</span>
+      <span class="cpn-no">COUPON No.${r.no ?? 'LAST'}</span>
+      <span class="cpn-bar"></span>
     </div>
+    <div class="cpn-edge"></div>
+    <div class="cpn-handle"><i></i></div>
+    <div class="cpn-guide"></div>
   </div>`;
 }
+let autoAll = false, slideP = 0, lastStep = 0, drag = null, autoT = null;
+const cpn = () => $('tktWrap').firstElementChild;
 function startReveal() {
-  cur = 0; $('summary').hidden = true; $('stage').hidden = false; $('stickBtn').hidden = true; $('skipAll').hidden = false;
+  cur = 0; autoAll = false;
+  $('summary').hidden = true; $('result').hidden = true; $('stickBtn').hidden = true;
   showTicket();
 }
 function showTicket() {
-  phase = 'closed'; tearP = 0; openO = 0; lastStep = 0;
+  phase = 'closed'; slideP = 0; lastStep = 0;
+  $('stage').hidden = false; $('result').hidden = true; $('nextBtn').hidden = true;
   $('stage').className = 'stage';
-  $('fx').innerHTML = '';
-  $('prog').textContent = `${cur + 1} / ${lastResults.length}`;
-  $('tktWrap').innerHTML = ticketHTML(lastResults[cur]);
-  $('stageHint').textContent = '위쪽 절취선을 잡고 오른쪽으로 쭉 끌어줘';
-  $('nextBtn').hidden = true;
+  $('fx').innerHTML = '<div class="bokeh"></div>';
+  $('prog').innerHTML = `<b>${cur + 1}</b> / ${lastResults.length}`;
+  $('stageHint').innerHTML = `화살표 부분을 오른쪽으로 밀거나 <em>'쿠폰 오픈'</em> 버튼을 눌러주세요.`;
+  $('tktWrap').innerHTML = couponHTML(lastResults[cur]);
+  $('openBtns').hidden = false;
+  if (autoAll) setTimeout(() => autoSlide(), 500);
 }
-const tkt = () => $('tktWrap').firstElementChild;
-let tearP = 0, openO = 0, lastStep = 0, drag = null, autoT = null;
-function setTear(p) {
-  tearP = Math.max(tearP, Math.min(1, p));
-  tkt().style.setProperty('--p', tearP.toFixed(3));
-  const step = Math.floor(tearP * 14);
-  if (step > lastStep) { lastStep = step; sfx('tick'); try { navigator.vibrate?.(6); } catch (e) {} }
-  if (tearP >= .96) completeTear();
+function setSlide(p) {
+  slideP = Math.max(0, Math.min(1, p));
+  cpn().style.setProperty('--p', slideP.toFixed(3));
+  const step = Math.floor(slideP * 16);
+  if (step > lastStep) { lastStep = step; sfx('tick'); try { navigator.vibrate?.(5); } catch (e) {} }
+  if (step < lastStep) lastStep = step;
+  if (slideP > .04) cpn().classList.add('sliding');
 }
-function completeTear() {
+function autoSlide() {
   if (phase !== 'closed') return;
-  const r = lastResults[cur], tier = tierOf(r), t = tkt();
-  phase = 'torn'; drag = null;
-  t.style.setProperty('--p', 1); t.classList.add('torn');
-  sfx('rip');
-  $('fx').insertAdjacentHTML('beforeend', `<div class="fx-bits top">${bits(14, 'paper', ['#fff', '#fff6d1', '#e2312f'])}</div>`);
-  if (tier !== 'normal') { t.classList.add('charge', 'charge-' + tier); $('stage').classList.add('charge-' + tier); }
-  $('stageHint').textContent = '이제 덮개를 잡고 위로 쭉 펼쳐줘';
-}
-function setOpen(o) {
-  openO = Math.max(0, Math.min(1, o));
-  tkt().style.setProperty('--o', openO.toFixed(3));
-}
-function completeOpen() {
-  if (phase !== 'torn') return;
-  const r = lastResults[cur], tier = tierOf(r), t = tkt();
-  phase = 'busy'; drag = null;
-  t.classList.remove('charge'); t.classList.add('settle', 'open'); setOpen(1);
-  $('stage').classList.add('hit-' + tier);
-  sfx(tier); try { navigator.vibrate?.(tier === 'top' ? [30, 40, 60] : 20); } catch (e) {}
-  const colors = ['#f6b81a', '#e2312f', '#fff', r.color, '#2f9e5a', '#1f7ae0'];
-  $('fx').insertAdjacentHTML('beforeend', `<div class="fx-rays"></div><div class="fx-flash"></div>`
-    + (tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 70 : 30, 'conf', colors)}</div>` : `<div class="fx-bits">${bits(10, 'spark', ['#fff', '#f6b81a'])}</div>`)
-    + (tier === 'top' ? `<div class="fx-banner"><span>대박!</span></div>` : ''));
-  $('stageHint').textContent = '';
-  setTimeout(() => {
-    phase = 'open';
-    if (cur < lastResults.length - 1) { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠지 (${cur + 2}/${lastResults.length})`; }
-    else showSummary(900);
-  }, 700);
-}
-// 탭만 했을 때: 자동으로 쭉 뜯기 / 쭉 펼치기
-function autoRun(kind) {
   cancelAnimationFrame(autoT);
-  const t0 = performance.now(), from = kind === 'tear' ? tearP : openO, dur = kind === 'tear' ? 650 : 520;
-  const stepF = now => {
-    const k = Math.min(1, (now - t0) / dur), v = from + (1 - from) * (1 - Math.pow(1 - k, 2));
-    if (kind === 'tear') { if (phase !== 'closed') return; setTear(v); }
-    else { if (phase !== 'torn') return; setOpen(v); if (k >= 1) return completeOpen(); }
-    if (k < 1) autoT = requestAnimationFrame(stepF);
+  const t0 = performance.now(), from = slideP, dur = 900;
+  const f = now => {
+    if (phase !== 'closed') return;
+    const k = Math.min(1, (now - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    setSlide(from + (1 - from) * e);
+    if (k < 1) autoT = requestAnimationFrame(f); else finishOpen();
   };
-  autoT = requestAnimationFrame(stepF);
+  autoT = requestAnimationFrame(f);
+}
+function snapBack() {
+  const t0 = performance.now(), from = slideP;
+  const f = now => { const k = Math.min(1, (now - t0) / 260); setSlide(from * (1 - k)); if (k < 1) requestAnimationFrame(f); else cpn().classList.remove('sliding'); };
+  requestAnimationFrame(f);
+}
+function finishOpen() {
+  if (phase !== 'closed') return;
+  const r = lastResults[cur], tier = tierOf(r), c = cpn();
+  phase = 'busy'; drag = null; setSlide(1);
+  c.classList.add('opened');
+  $('openBtns').hidden = true; $('stageHint').textContent = '';
+  sfx('rip');
+  $('stage').classList.add('hit-' + tier);
+  const colors = ['#f6b81a', '#ff5a3c', '#fff', r.color];
+  $('fx').insertAdjacentHTML('beforeend', `<div class="fire"></div><div class="fx-flash"></div><div class="fx-bits">${bits(tier === 'top' ? 60 : tier === 'high' ? 30 : 14, tier === 'normal' ? 'spark' : 'conf', colors)}</div>`);
+  setTimeout(() => showResult(r, tier), tier === 'top' ? 1500 : 1100);
+}
+function showResult(r, tier) {
+  sfx(tier); try { navigator.vibrate?.(tier === 'top' ? [30, 40, 60] : 20); } catch (e) {}
+  $('stage').hidden = true;
+  $('result').innerHTML = `<div class="res res-${tier}" style="--c:${esc(r.color)}">
+    <div class="res-band"><span class="res-medal">${gl(r)}</span><span class="res-msg">${tier === 'top' ? '대박! 축하합니다!' : '축하합니다!'}</span></div>
+    <div class="res-stage">
+      <div class="res-pillar"></div>
+      <div class="res-ring"><i></i><i></i><i></i></div>
+      <div class="res-hero">${r.image ? `<img src="${esc(r.image)}" alt="">` : `<b class="bigL">${esc(letter(r.grade))}</b>`}</div>
+      ${tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 60 : 24, 'conf', ['#f6b81a', '#fff', r.color, '#7be0ff'])}</div>` : ''}
+    </div>
+    <p class="res-name">${esc(r.grade)} · ${esc(r.name)}</p>
+  </div>`;
+  $('result').hidden = false;
+  phase = 'open';
+  if (cur < lastResults.length - 1) {
+    if (autoAll) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
+    else { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠폰 (${cur + 2}/${lastResults.length})`; }
+  } else setTimeout(showSummary, autoAll ? 1600 : 1800);
 }
 $('tktWrap').addEventListener('pointerdown', e => {
-  const t = tkt(); if (!t) return;
-  if (phase === 'closed') {
-    const r = t.querySelector('.tkt-strip').getBoundingClientRect();
-    drag = {mode: 'tear', left: r.left, w: r.width, x0: e.clientX, y0: e.clientY, moved: false};
-  } else if (phase === 'torn') {
-    const r = t.getBoundingClientRect();
-    drag = {mode: 'open', h: r.height, x0: e.clientX, y0: e.clientY, moved: false};
-    t.classList.remove('settle');
-  } else return;
+  if (phase !== 'closed') return;
+  cancelAnimationFrame(autoT);
+  const r = cpn().getBoundingClientRect();
+  drag = {left: r.left, w: r.width, x0: e.clientX, moved: false, startP: slideP};
   $('tktWrap').setPointerCapture?.(e.pointerId);
   e.preventDefault();
 });
 $('tktWrap').addEventListener('pointermove', e => {
   if (!drag) return;
-  if (Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) > 6) drag.moved = true;
-  if (drag.mode === 'tear') setTear((e.clientX - drag.left) / drag.w);
-  else setOpen((drag.y0 - e.clientY) / (drag.h * .85));
+  if (Math.abs(e.clientX - drag.x0) > 5) drag.moved = true;
+  setSlide(drag.startP + (e.clientX - drag.x0) / (drag.w * .9));
+  if (slideP >= .98) finishOpen();
 });
 const endDrag = () => {
   if (!drag) return;
   const d = drag; drag = null;
-  if (d.mode === 'tear') { if (!d.moved && phase === 'closed') autoRun('tear'); }
-  else if (phase === 'torn') {
-    if (!d.moved || openO >= .45) autoRun('open');
-    else { tkt().classList.add('settle'); setOpen(0); }
-  }
+  if (phase !== 'closed') return;
+  if (!d.moved || slideP >= .6) autoSlide(); else snapBack();
 };
 $('tktWrap').addEventListener('pointerup', endDrag);
 $('tktWrap').addEventListener('pointercancel', endDrag);
-$('tktWrap').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); phase === 'closed' ? autoRun('tear') : autoRun('open'); } });
-function showSummary(delay = 0) {
-  setTimeout(() => {
-    $('stage').hidden = true; $('nextBtn').hidden = true; $('skipAll').hidden = true;
-    $('summary').innerHTML = `<h3>이번에 뽑은 쿠지</h3><div class="sum-grid">${lastResults.map(r => `<div class="sum ${tierOf(r)}" style="--c:${esc(r.color)}">
-      ${r.image ? `<img src="${esc(r.image)}" alt="">` : `<b class="bigL">${esc(letter(r.grade))}</b>`}
-      <span class="glogo sm"><b>${esc(letter(r.grade))}</b>${/상$/.test(r.grade) ? '<i>상</i>' : ''}</span><p>${esc(r.name)}</p></div>`).join('')}</div>`;
-    $('summary').hidden = false; $('stickBtn').hidden = false;
-  }, delay);
+$('tktWrap').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); autoSlide(); } });
+function showSummary() {
+  $('stage').hidden = true; $('result').hidden = true; $('nextBtn').hidden = true;
+  $('summary').innerHTML = `<h3>이번에 뽑은 쿠폰</h3><div class="sum-grid">${lastResults.map(r => `<div class="sum ${tierOf(r)}" style="--c:${esc(r.color)}">
+    ${r.image ? `<img src="${esc(r.image)}" alt="">` : `<b class="bigL">${esc(letter(r.grade))}</b>`}
+    ${gl(r)}<p>${esc(r.name)}</p></div>`).join('')}</div>`;
+  $('summary').hidden = false; $('stickBtn').hidden = false;
 }
 async function stick() {
   fresh = new Set(lastResults.filter(r => r.no).map(r => r.no));
@@ -490,10 +483,10 @@ $('regBtn').addEventListener('click', doRegister);
 $('goPick').addEventListener('click', openPick);
 $('pickClose').addEventListener('click', closePick);
 $('pile').addEventListener('click', e => {
-  const b = e.target.closest('button.kc'); if (!b || busy) return;
+  const b = e.target.closest('button.cp'); if (!b || busy) return;
   const n = +b.dataset.n, i = picked.indexOf(n), cap = Math.min(me()?.credits || 0, left());
   if (i >= 0) picked.splice(i, 1);
-  else if (picked.length >= cap) { toast(`뽑기권은 ${cap}장이야`); return; }
+  else if (picked.length >= cap) { toast(`선택할 수 있는 쿠폰은 ${cap}개예요`); return; }
   else picked.push(n);
   renderPile();
 });
@@ -504,7 +497,8 @@ $('pickRand').addEventListener('click', () => {
 });
 $('tearBtn').addEventListener('click', doTear);
 $('nextBtn').addEventListener('click', () => { if (phase === 'open') { cur++; showTicket(); } });
-$('skipAll').addEventListener('click', () => { phase = 'done'; showSummary(); });
+$('openBtn').addEventListener('click', autoSlide);
+$('autoBtn').addEventListener('click', () => { autoAll = true; autoSlide(); });
 $('stickBtn').addEventListener('click', stick);
 $('feed').addEventListener('click', e => { const u = e.target.dataset.full; if (u) { $('modalImg').src = u; $('modal').hidden = false; } });
 $('modal').addEventListener('click', () => $('modal').hidden = true);

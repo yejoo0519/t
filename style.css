@@ -391,3 +391,153 @@ button.kc:hover{transform:translateY(-3px)}
   .layout .pr{grid-template-columns:minmax(0,240px) minmax(0,1fr)}
 }
 @media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* =========================================================
+   일번쿠지 키오스크 스타일 (쿠폰 선택 / 쿠폰 오픈 / 결과)
+   ========================================================= */
+.kbox.kiosk{width:min(1000px,100%);padding:18px 0 0;color:#fff;border:3px solid #9d6bff;border-radius:22px;
+  background:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1.5px) 0 0/14px 14px,linear-gradient(180deg,#1d2150,#141738 60%,#10122c);
+  box-shadow:0 0 0 2px #2a1d5c,0 0 24px 4px rgba(157,107,255,.55),inset 0 0 40px rgba(120,90,255,.18)}
+.kiosk .kx{position:absolute;right:12px;top:12px;z-index:5;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.35)}
+.ki-head{text-align:center;padding:4px 56px 12px;border-bottom:2px solid rgba(157,107,255,.6);box-shadow:0 6px 14px -10px rgba(157,107,255,.9)}
+.ki-head h2{margin:0;font-family:"Noto Sans KR",sans-serif;font-weight:800;font-size:clamp(17px,2.4vw,22px);line-height:1.35;text-wrap:balance}
+.ki-head h2 em,.ki-ins em{font-style:normal;color:#ffe14d}
+.ki-head p{margin:4px 0 0;font-size:13px;color:#a9add6}
+.ki-count{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 18px 10px;padding:10px 12px 10px 20px;border-radius:14px;
+  border:2px solid #ff6ad5;box-shadow:0 0 12px rgba(255,106,213,.6),inset 0 0 12px rgba(255,106,213,.25);background:rgba(20,10,40,.5);font-weight:800}
+.ki-count b{font-family:"Black Han Sans";font-weight:400;font-size:26px;color:#ffe14d;margin-right:2px}
+.ki-rand{flex:none;min-height:40px;padding:6px 18px;border:0;border-radius:999px;background:linear-gradient(180deg,#8f7bff,#5b3fe0);color:#fff;font-weight:800;cursor:pointer;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.kiosk .stock{margin:0 18px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.kiosk .stock-n b{color:#ffe14d}
+.kiosk .pile{margin:0 18px;padding:14px;gap:10px 8px;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));
+  background:radial-gradient(circle,rgba(255,255,255,.08) 1px,transparent 1.5px) 0 0/12px 12px,#171a40;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.ki-err{margin:10px 18px 0;padding:0 12px;border-radius:10px;background:rgba(255,80,80,.15);color:#ffb3b3;font-weight:700}
+.ki-err:empty{display:none}
+.ki-foot{position:sticky;bottom:0;z-index:4;display:flex;justify-content:center;gap:10px;padding:16px 18px 18px;background:linear-gradient(0deg,#10122c 70%,rgba(16,18,44,0))}
+.ki-go{min-width:min(320px,80%);min-height:56px;border:0;border-radius:999px;cursor:pointer;font-family:"Black Han Sans";font-size:22px;color:#29330a;
+  background:linear-gradient(180deg,#e6f56a,#b6cc2a);box-shadow:inset 0 -4px 0 rgba(60,80,0,.35),0 6px 16px -6px rgba(200,230,60,.7)}
+.ki-go:disabled{filter:grayscale(.6) brightness(.6);cursor:not-allowed}
+
+/* 선택판 쿠폰 */
+.cp{position:relative;aspect-ratio:1.7;border:0;padding:0;border-radius:7px;cursor:pointer;overflow:visible;
+  background:linear-gradient(180deg,#ff8f3f,#f2661a);box-shadow:inset 0 0 0 2px rgba(255,225,190,.9),inset 0 0 0 4px #f2661a,0 3px 0 #9c3f0e,0 6px 10px -4px rgba(0,0,0,.6);transition:transform .12s}
+.cp-tab{position:absolute;left:0;top:18%;bottom:18%;width:20%;border-radius:0 999px 999px 0;background:#fff;display:grid;place-items:center}
+.cp-tab i{width:9px;height:9px;border-top:3px solid #2c6bff;border-right:3px solid #2c6bff;transform:rotate(45deg);margin-left:-3px}
+.cp-logo{position:absolute;left:50%;top:14%;width:24px;height:24px;margin-left:-4px;transform:rotate(45deg);background:#fff;border:2px solid #1b1416;display:grid;place-items:center}
+.cp-logo span{transform:rotate(-45deg);font-family:"Black Han Sans";font-size:8px;color:#e2312f;white-space:nowrap}
+.cp-bar{position:absolute;left:32%;right:10%;bottom:14%;height:22%;border-radius:2px;background:repeating-linear-gradient(90deg,#1b1416 0 2px,#fff 2px 3px,#1b1416 3px 4px,#fff 4px 6px,#1b1416 6px 9px,#fff 9px 10px);box-shadow:0 0 0 2px #fff}
+button.cp:hover{transform:translateY(-2px)}
+.cp.on{transform:translateY(-3px) scale(1.05);box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #f2661a,0 0 0 3px #59f0ff,0 0 16px 4px rgba(89,240,255,.65)}
+.cp em{position:absolute;right:-7px;top:-8px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-style:normal;font-family:"Black Han Sans";font-size:13px;background:#59f0ff;color:#06303a;box-shadow:0 0 0 2px #fff}
+.cp.done{cursor:default;background:linear-gradient(180deg,#4b4e5a,#30323b);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18),0 3px 0 #1c1d23;display:grid;place-items:center}
+.cp.done::before{content:"";position:absolute;left:0;top:18%;bottom:18%;width:16%;border-radius:0 999px 999px 0;background:#23252c}
+.cp-g{display:flex;align-items:baseline;gap:1px;color:#e9e9ef;line-height:1}
+.cp-g b{font-family:"Black Han Sans";font-weight:400;font-size:clamp(18px,2.6vw,24px)}
+.cp-g small{font-size:10px;font-weight:800}
+@media(max-width:600px){.kiosk .pile{grid-template-columns:repeat(auto-fill,minmax(74px,1fr));margin:0 10px;padding:10px}.ki-count{margin:12px 10px 8px;padding-left:14px;font-size:14px}.ki-head{padding:0 50px 10px}.kiosk .stock{margin:0 10px 10px}}
+
+/* 쿠폰 오픈 무대 */
+.kiosk .stage{margin:0;border-radius:0;padding:24px 14px 20px;min-height:min(70vh,600px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:radial-gradient(circle at 50% 50%,#2a2f78,#141738 70%)}
+.ki-ins{margin:0;text-align:center;font-weight:800;font-size:clamp(16px,2.4vw,21px);line-height:1.4;text-wrap:balance;position:relative;z-index:3}
+.kiosk .stage-prog{position:relative;top:auto;left:auto;transform:none;background:none;font-family:"Noto Sans KR";font-weight:700;color:#c9cdf2}
+.kiosk .stage-prog b{font-family:"Black Han Sans";font-weight:400;font-size:22px;color:#fff}
+.ki-btns{display:flex;gap:12px;position:relative;z-index:3}
+.ki-btns[hidden]{display:none}
+.ki-open,.ki-auto{min-width:140px;min-height:52px;border:0;border-radius:999px;font-family:"Black Han Sans";font-size:19px;cursor:pointer;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25)}
+.ki-open{background:linear-gradient(180deg,#fff27a,#f2cf1a);color:#4a3a00}
+.ki-auto{background:linear-gradient(180deg,#7df07a,#2fbf3a);color:#0d3a10}
+.bokeh{position:absolute;inset:0;background:
+  radial-gradient(circle at 12% 80%,rgba(255,255,255,.5) 0 3px,transparent 4px),radial-gradient(circle at 30% 20%,rgba(255,255,255,.35) 0 5px,transparent 6px),
+  radial-gradient(circle at 70% 70%,rgba(255,255,255,.4) 0 4px,transparent 5px),radial-gradient(circle at 88% 30%,rgba(255,255,255,.3) 0 6px,transparent 7px),
+  radial-gradient(circle at 55% 12%,rgba(255,255,255,.3) 0 3px,transparent 4px),radial-gradient(circle at 20% 50%,rgba(255,255,255,.25) 0 7px,transparent 8px);
+  animation:float 6s ease-in-out infinite alternate}
+@keyframes float{to{transform:translateY(-24px)}}
+
+/* 큰 쿠폰 */
+.cpn{position:relative;width:min(440px,84vw);aspect-ratio:1.55;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;animation:drop .5s cubic-bezier(.3,1.5,.5,1) both}
+.cpn-under,.cpn-cover{position:absolute;inset:0;border-radius:16px}
+.cpn-under{overflow:hidden;display:grid;place-items:center;
+  background:linear-gradient(180deg,#5b5fd6 0 13%,#fff 13% 18%,transparent 18%),
+             linear-gradient(125deg,#cfd3e6,#f5f6fb 30%,#b9bfdc 48%,#f4f1ff 62%,#c3c8e2 80%,#eef0f8);
+  box-shadow:inset 0 0 0 4px #ff8f3f,inset 0 0 0 7px #fff,0 18px 40px rgba(0,0,0,.5)}
+.cpn-under::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 45%,transparent 60%);transform:translateX(-120%)}
+.cpn.opened .cpn-under::after{animation:shine 1.2s .2s ease-out}
+@keyframes shine{to{transform:translateX(120%)}}
+.cpn-last{position:absolute;top:24%;font-family:"Black Han Sans";font-size:18px;color:#5b3fe0}
+.gold-g{display:inline-flex;align-items:baseline;line-height:.9;font-family:"Black Han Sans";font-weight:400;
+  background:linear-gradient(180deg,#fff6c2 0,#ffd24a 35%,#d18a00 60%,#ffe58a 85%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:2px #6b3d00;filter:drop-shadow(0 4px 0 rgba(0,0,0,.35))}
+.gold-g b{font-weight:400;font-size:1em}.gold-g small{font-size:.42em;margin-left:2px}
+.cpn-under .gold-g{font-size:clamp(90px,20vw,150px);transform:scale(.7);opacity:.85;transition:transform .5s cubic-bezier(.3,1.8,.5,1)}
+.cpn.opened .cpn-under .gold-g{transform:scale(1);animation:gpulse 1.2s ease-in-out .5s infinite}
+@keyframes gpulse{50%{filter:drop-shadow(0 4px 0 rgba(0,0,0,.35)) drop-shadow(0 0 18px rgba(255,214,74,.9))}}
+.cpn-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10% 10% 10% 22%;
+  background:linear-gradient(180deg,#ff9a48,#f2661a);box-shadow:inset 0 0 0 4px #ffd7b0,inset 0 0 0 7px #f2661a,inset 0 0 0 9px rgba(255,255,255,.75),0 18px 40px rgba(0,0,0,.5);
+  clip-path:inset(0 0 0 calc(var(--p) * 100%) round 16px)}
+.cpn-logo{width:46px;height:46px;transform:rotate(45deg);background:#fff;border:3px solid #1b1416;display:grid;place-items:center;margin-bottom:6px}
+.cpn-logo span{transform:rotate(-45deg);font-family:"Black Han Sans";font-size:13px;color:#e2312f}
+.cpn-title{font-weight:800;font-size:clamp(16px,2.6vw,22px);color:#fff;text-align:center;line-height:1.2;text-shadow:0 2px 0 rgba(120,40,0,.45)}
+.cpn-no{font-weight:800;font-size:12px;color:#fff;opacity:.9}
+.cpn-bar{width:78%;height:20%;margin-top:6px;border-radius:3px;box-shadow:0 0 0 4px #fff;
+  background:repeating-linear-gradient(90deg,#1b1416 0 3px,#fff 3px 5px,#1b1416 5px 6px,#fff 6px 9px,#1b1416 9px 13px,#fff 13px 15px,#1b1416 15px 16px,#fff 16px 19px)}
+/* 벗겨지는 경계: 반짝이 별 */
+.cpn-edge{position:absolute;top:2%;bottom:2%;left:calc(var(--p) * 100%);width:16px;margin-left:-8px;opacity:0;pointer-events:none;
+  background:radial-gradient(circle,#fff 0 2px,transparent 3px) 0 0/16px 18px,linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);
+  filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px #ffe14d)}
+.cpn.sliding:not(.opened) .cpn-edge{opacity:1;animation:twinkle .25s steps(2) infinite}
+@keyframes twinkle{50%{background-position:0 9px,0 0}}
+/* 화살표 손잡이 */
+.cpn-handle{position:absolute;z-index:3;top:22%;bottom:22%;width:15%;left:calc(1.5% + var(--p) * 83%);border-radius:0 999px 999px 0;background:#fff;display:grid;place-items:center;
+  box-shadow:4px 0 12px rgba(0,0,0,.25)}
+.cpn-handle i{width:26%;aspect-ratio:1;border-top:7px solid #2c6bff;border-right:7px solid #2c6bff;transform:rotate(45deg);margin-left:-12%}
+.cpn.opened .cpn-handle{transition:opacity .3s;opacity:0}
+.cpn-guide{position:absolute;z-index:4;left:14%;top:50%;width:46%;height:16px;margin-top:-8px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(80,255,120,0),#4dff7a);clip-path:polygon(0 30%,82% 30%,82% 0,100% 50%,82% 100%,82% 70%,0 70%);
+  filter:drop-shadow(0 0 6px #4dff7a);animation:guide 1.3s ease-in-out infinite}
+@keyframes guide{0%{transform:translateX(-10px);opacity:0}30%{opacity:1}100%{transform:translateX(40px);opacity:0}}
+.cpn.sliding .cpn-guide,.cpn.opened .cpn-guide{display:none}
+/* 오픈 순간 불꽃 오라 */
+.kiosk .fire{position:absolute;left:50%;top:50%;width:min(780px,150vw);aspect-ratio:1.4;transform:translate(-50%,-50%);pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(ellipse at 50% 50%,rgba(255,200,80,.0) 28%,rgba(255,140,40,.75) 38%,rgba(255,60,20,.5) 50%,transparent 66%);
+  animation:flame .35s ease-in-out infinite alternate,firein .5s ease-out both}
+@keyframes flame{to{transform:translate(-50%,-51%) scale(1.04,1.07);filter:hue-rotate(-12deg)}}
+@keyframes firein{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}}
+.stage.hit-normal .fire{background:radial-gradient(ellipse,transparent 30%,rgba(90,170,255,.6) 40%,rgba(60,90,255,.35) 52%,transparent 66%)}
+.stage.hit-top .fire{background:radial-gradient(ellipse,transparent 26%,rgba(255,240,150,.9) 36%,rgba(255,150,40,.75) 46%,rgba(255,40,80,.5) 56%,transparent 68%)}
+.stage.hit-top{animation:quake .5s}
+
+/* 결과 화면 */
+.result{background:radial-gradient(circle at 50% 60%,#25307a,#10122c 72%);min-height:min(70vh,600px);display:flex}
+.res{flex:1;display:flex;flex-direction:column}
+.res-band{position:relative;display:flex;align-items:center;gap:14px;margin:18px 0 0;padding:10px 20px 10px 14px;
+  background:linear-gradient(90deg,rgba(255,255,255,.95),rgba(205,225,255,.92) 55%,rgba(170,200,255,.6));color:#1b2160;animation:bandin .5s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes bandin{from{transform:translateX(-100%)}}
+.res-medal{flex:none;display:grid;place-items:center;width:84px;height:84px;margin:-26px 0;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#6b5a2a,#2b2412);box-shadow:0 0 0 4px #ffd24a,0 0 0 8px rgba(255,255,255,.7),0 0 20px 6px rgba(255,214,74,.7)}
+.res-medal .gold-g{font-size:46px}
+.res-msg{font-family:"Black Han Sans";font-size:clamp(24px,4vw,34px);letter-spacing:.02em}
+.res-stage{position:relative;flex:1;display:grid;place-items:center;min-height:320px;overflow:hidden}
+.res-pillar{position:absolute;left:50%;bottom:22%;width:46%;height:90%;transform:translateX(-50%);
+  background:linear-gradient(0deg,color-mix(in srgb,var(--c) 70%,#7be0ff) 0,rgba(123,224,255,.25) 50%,transparent);
+  -webkit-mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);animation:pillar 1s ease-out both}
+@keyframes pillar{from{transform:translateX(-50%) scaleY(0);transform-origin:bottom}}
+.res-stage{perspective:700px}
+.res-ring{position:absolute;left:50%;bottom:4%;width:min(330px,72vw);aspect-ratio:1;transform:translateX(-50%) rotateX(74deg);transform-style:preserve-3d}
+.res-ring i{position:absolute;inset:0;border-radius:50%;border:3px solid #7be0ff;box-shadow:0 0 14px #7be0ff,inset 0 0 14px #7be0ff;animation:ring 2.4s linear infinite}
+.res-ring i:nth-child(2){inset:12% 10%;border-style:dashed;animation-duration:3.4s;animation-direction:reverse}
+.res-ring i:nth-child(3){inset:-14% -8%;border-width:2px;opacity:.5;animation:ringp 1.6s ease-out infinite}
+@keyframes ring{to{transform:rotate(1turn)}}
+@keyframes ringp{from{transform:scale(.8);opacity:.8}to{transform:scale(1.15);opacity:0}}
+.res-hero{position:relative;z-index:2;margin-bottom:16%;animation:hero .8s .2s cubic-bezier(.3,1.5,.5,1) both,bob 2.4s 1s ease-in-out infinite}
+.res-hero img{width:min(200px,46vw);height:min(200px,46vw);object-fit:contain;filter:drop-shadow(0 0 18px rgba(123,224,255,.8)) drop-shadow(0 12px 10px rgba(0,0,0,.5))}
+.res-hero .bigL{font-size:140px;color:#fff;-webkit-text-stroke:6px var(--c)}
+@keyframes hero{from{transform:translateY(60px) scale(.4);opacity:0}}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.res-name{margin:0 0 14px;text-align:center;font-weight:800;font-size:20px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.res-top .res-ring i{border-color:#ffd24a;box-shadow:0 0 16px #ffd24a,inset 0 0 16px #ffd24a}
+.res-top .res-pillar{background:linear-gradient(0deg,#ffd24a 0,rgba(255,240,180,.35) 55%,transparent)}
+.res-top .res-hero img{filter:drop-shadow(0 0 22px rgba(255,214,74,.95)) drop-shadow(0 12px 10px rgba(0,0,0,.5))}
+.res .fx-bits{top:40%}
+.kiosk .summary{margin:18px}
+@media(prefers-reduced-motion:reduce){.cpn,.cpn-guide,.cpn-edge,.bokeh,.kiosk .fire,.res-band,.res-pillar,.res-ring i,.res-hero,.cpn.opened .cpn-under .gold-g{animation:none!important}}

@@ -63,6 +63,24 @@
         <p class="hint">기준·최근 인증 칸을 고치고 칸 밖을 누르면 바로 저장돼요. 남음 = 최근 인증 − 기준 − 사용 (뽑기권으로 바뀐 GP는 사용에 포함). 뽑기권은 받았지만 아직 안 쓴 장수.</p>
       </div>
     </div>
+
+    <div class="agrid">
+      <div class="card">
+        <h3>선택 경품 (등급 안에서 고르는 아이템)</h3>
+        <label for="itPrize">등급 고르기</label>
+        <select id="itPrize"></select>
+        <div id="itEdit" style="margin-top:12px"></div>
+        <div class="row-btns">
+          <button class="btn ghost" id="itAdd">+ 아이템 추가</button>
+          <button class="btn" id="itSave">아이템 저장</button>
+        </div>
+        <p class="hint">당첨된 사람이 이 등급의 아이템 중 하나를 골라요. 코드 칸에 한 줄에 하나씩 넣으면 고를 때마다 하나씩 지급되고, 코드 개수가 곧 수량이에요. 코드를 비워두면 수량 제한 없이 "관리자 지급"으로 표시돼요. 판을 다시 섞어도 아이템과 남은 코드는 그대로예요.</p>
+      </div>
+      <div class="card">
+        <h3>코드 지급 내역 <span class="hint" id="clCount"></span></h3>
+        <div class="scroll"><table><thead><tr><th>받은 사람</th><th>아이템</th><th>코드</th><th>시간</th></tr></thead><tbody id="clList"></tbody></table></div>
+      </div>
+    </div>
   </div>
 </div></main>
 <div class="toast" id="toast" hidden></div>
@@ -100,7 +118,73 @@ async function load() {
   S.opened = openedCnt || 0;
   $('boardInfo').textContent = S.board_size ? `지금 판: ${S.board_size}장 중 ${S.opened}장 뽑힘` : '아직 판이 없어요. 상품을 넣고 저장하면 판이 만들어져요.';
   drawPrizes(); drawMembers();
+  await loadItems();
 }
+
+/* ---------- 선택 경품 ---------- */
+let allItems = [], allCodes = [], itEdit = [];
+async function loadItems() {
+  const [i, c] = await Promise.all([
+    sb.from('prize_items').select('*').order('sort'),
+    sb.from('item_codes').select('*')
+  ]);
+  if (i.error || c.error) { toast('아이템 불러오기 실패: ' + errMsg(i.error || c.error)); return; }
+  allItems = i.data; allCodes = c.data;
+  const sel = $('itPrize'), cur = sel.value;
+  sel.innerHTML = prizes.length ? prizes.map(p => `<option value="${esc(p.id)}">${esc(p.grade)} · ${esc(p.name)} (아이템 ${allItems.filter(x => x.prize_id === p.id).length}개)</option>`).join('') : '<option value="">먼저 상품을 저장하세요</option>';
+  if (prizes.some(p => p.id === cur)) sel.value = cur;
+  pickItPrize();
+  const claimed = allCodes.filter(x => x.claimed_slot_uid).sort((x, y) => String(y.claimed_at).localeCompare(String(x.claimed_at)));
+  $('clCount').textContent = `${claimed.length}건`;
+  $('clList').innerHTML = claimed.length ? claimed.map(x => `<tr><td>${esc(x.claimed_name || '')}</td><td>${esc(allItems.find(i => i.id === x.item_id)?.name || '')}</td><td><code>${esc(x.code)}</code></td><td class="n">${x.claimed_at ? new Date(x.claimed_at).toLocaleString('ko-KR', {month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : ''}</td></tr>`).join('') : '<tr><td colspan="4" class="hint">아직 지급된 코드가 없어요</td></tr>';
+}
+function pickItPrize() {
+  const pid = $('itPrize').value;
+  itEdit = allItems.filter(x => x.prize_id === pid).map(x => ({...x,
+    used: allCodes.filter(c => c.item_id === x.id && c.claimed_slot_uid).length,
+    codes: allCodes.filter(c => c.item_id === x.id && !c.claimed_slot_uid).map(c => c.code).join('\n')}));
+  drawItems();
+}
+function drawItems() {
+  $('itEdit').innerHTML = itEdit.length ? itEdit.map((x, i) => `<div class="itrow" data-i="${i}">
+    <div class="itrow-h"><input type="text" data-k="name" value="${esc(x.name)}" list="dragonList" placeholder="아이템 이름 (드래곤 이름이면 이미지 자동)" aria-label="아이템 이름"><button class="x itdel" aria-label="아이템 삭제">✕</button></div>
+    <div class="pv">${pv(x.name)}</div>
+    <textarea data-k="codes" placeholder="코드를 한 줄에 하나씩 (비워두면 수량 제한 없음)" aria-label="코드">${esc(x.codes || '')}</textarea>
+    <p class="hint">남은 코드 ${(x.codes || '').split('\n').filter(s => s.trim()).length}개${x.used ? ` · 이미 지급 ${x.used}개` : ''}</p>
+  </div>`).join('') : '<p class="hint">이 등급엔 아직 아이템이 없어요. 없으면 그냥 등급 상품만 나가요.</p>';
+}
+$('itPrize').addEventListener('change', pickItPrize);
+$('itAdd').addEventListener('click', () => { if (!$('itPrize').value) return; itEdit.push({name: '', codes: '', used: 0}); drawItems(); });
+$('itEdit').addEventListener('input', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  const x = itEdit[+e.target.closest('.itrow').dataset.i]; x[k] = e.target.value;
+  if (k === 'name') e.target.closest('.itrow').querySelector('.pv').innerHTML = pv(x.name);
+});
+$('itEdit').addEventListener('click', e => {
+  const b = e.target.closest('.itdel'); if (!b) return;
+  const x = itEdit[+b.closest('.itrow').dataset.i];
+  if (x.used && !confirm2(b, '지급 기록도 삭제?')) return;
+  itEdit.splice(+b.closest('.itrow').dataset.i, 1); drawItems();
+});
+$('itSave').addEventListener('click', async () => {
+  const pid = $('itPrize').value; if (!pid) return;
+  const keep = itEdit.filter(x => x.name.trim());
+  const gone = allItems.filter(x => x.prize_id === pid && !keep.some(k => k.id === x.id)).map(x => x.id);
+  if (gone.length && !await run(sb.from('prize_items').delete().in('id', gone))) return;
+  for (const [i, x] of keep.entries()) {
+    const row = {prize_id: pid, name: x.name.trim(), image: findDragon(x.name)?.url || null, sort: i};
+    let id = x.id;
+    if (id) { if (!await run(sb.from('prize_items').update(row).eq('id', id))) return; }
+    else { const r = await sb.from('prize_items').insert(row).select('id').single(); if (r.error) { toast('실패: ' + errMsg(r.error)); return; } id = r.data.id; }
+    const want = [...new Set((x.codes || '').split('\n').map(s => s.trim()).filter(Boolean))];
+    const have = allCodes.filter(c => c.item_id === id && !c.claimed_slot_uid);
+    const del = have.filter(c => !want.includes(c.code)).map(c => c.id);
+    const add = want.filter(w => !have.some(c => c.code === w)).map(code => ({item_id: id, code}));
+    if (del.length && !await run(sb.from('item_codes').delete().in('id', del))) return;
+    if (add.length && !await run(sb.from('item_codes').insert(add))) return;
+  }
+  toast('아이템 저장'); await loadItems();
+});
 
 function pv(name) {
   const d = findDragon(name);

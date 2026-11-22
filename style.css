@@ -546,3 +546,45 @@ button.cp:hover{transform:translateY(-2px)}
 .res .fx-bits{top:40%}
 .kiosk .summary{margin:18px}
 @media(prefers-reduced-motion:reduce){.cpn,.cpn-guide,.cpn-edge,.bokeh,.kiosk .fire,.res-band,.res-pillar,.res-ring i,.res-hero,.cpn.opened .cpn-under .gold-g{animation:none!important}}
+
+/* ---------- 선택 경품 / 아이템 코드 ---------- */
+.res .ipick,.res .codebox{margin:0 18px 16px}
+.ipick{padding:14px;border-radius:16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(123,224,255,.45);box-shadow:inset 0 0 18px rgba(123,224,255,.15)}
+.ipick-t{margin:0 0 10px;text-align:center;font-weight:800;font-size:17px;color:#fff}
+.ipick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.iopt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:0;border-radius:14px;cursor:pointer;color:var(--ink);text-align:center;
+  background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.4),0 6px 12px -6px rgba(0,0,0,.6);transition:transform .12s,box-shadow .12s}
+.iopt img{width:64px;height:64px;object-fit:contain}
+.iopt-ph{font-size:38px;line-height:64px}
+.iopt-nm{font-weight:800;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.iopt-left{font-size:12px;font-weight:700;color:var(--mute)}
+.iopt:hover:not(:disabled){transform:translateY(-2px)}
+.iopt.on{box-shadow:0 0 0 3px #59f0ff,0 0 16px 4px rgba(89,240,255,.6);transform:translateY(-2px)}
+.iopt:disabled{opacity:.4;cursor:not-allowed}
+.ipick-go{display:block;margin:12px auto 0;min-width:min(260px,90%);min-height:50px;font-size:19px}
+.ipick .ki-err{margin:10px 0 0}
+.codebox{padding:16px;border-radius:16px;text-align:center;color:#1b2160;background:linear-gradient(135deg,#fff,#e6efff);box-shadow:0 0 0 3px #ffd24a,0 0 18px 4px rgba(255,214,74,.5);animation:drop .45s cubic-bezier(.3,1.5,.5,1) both}
+.codebox small{display:block;font-size:12px;font-weight:800;color:#5a62a8}
+.cb-item{display:block;font-family:"Black Han Sans";font-weight:400;font-size:24px;margin:2px 0 8px}
+.cb-code{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.cb-code code{padding:10px 14px;border-radius:10px;background:#1b2160;color:#ffe14d;font:800 clamp(18px,3vw,24px)/1.1 ui-monospace,Menlo,monospace;letter-spacing:.06em;overflow-wrap:anywhere;user-select:all}
+.cb-copy{min-height:44px;padding:8px 16px;border:0;border-radius:10px;background:#5b3fe0;color:#fff;font-weight:800;cursor:pointer}
+.cb-note{margin:8px 0 0;font-size:12px;color:#5a62a8}
+.mywins{width:100%;margin:0 0 16px}
+
+.kbox.wins{width:min(720px,100%)}
+.wins-list{display:grid;gap:12px;padding:16px 18px 20px}
+.win{border-radius:16px;padding:12px;background:rgba(255,255,255,.06);border:1.5px solid color-mix(in srgb,var(--c,#7be0ff) 60%,transparent)}
+.win-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.win-h img{width:44px;height:44px;object-fit:contain}
+.win-h .gold-g{font-size:34px}
+.win-nm{flex:1;font-weight:800;font-size:16px}
+.win-no{font-size:12px;color:#a9add6}
+.win .ipick,.win .codebox{margin:0}
+.win.past{border-color:rgba(255,255,255,.15)}
+.wins-past{margin:8px 0 0;font-size:18px;color:#c9cdf2}
+.wins-empty{text-align:center;color:#a9add6;margin:20px 0}
+
+.itrow{padding:10px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--bg)}
+.itrow-h{display:flex;gap:6px;align-items:center}
+.itrow textarea{min-height:90px;margin-top:6px;font-family:ui-monospace,Menlo,monospace;font-size:14px}

@@ -256,7 +256,7 @@ begin
            grade = pr.grade, name = pr.name, color = pr.color, image = pr.image
      where no = v_no;
     update public.prizes set remaining = remaining - 1 where id = pr.id;
-    v_results := v_results || jsonb_build_object('no', v_no, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
+    v_results := v_results || jsonb_build_object('no', v_no, 'prize_id', pr.id, 'grade', pr.grade, 'name', pr.name, 'color', pr.color, 'image', pr.image);
     k := k + 1;
   end loop;
 
@@ -289,6 +289,124 @@ $$;
 revoke all on function public.verify_pin(uuid, text) from public, anon, authenticated;
 grant execute on function public.verify_pin(uuid, text) to service_role;
 
+-- ---------- 선택 경품: 같은 등급 안에서 아이템 골라 코드 받기 ----------
+create table if not exists public.prize_items (
+  id uuid primary key default gen_random_uuid(),
+  prize_id uuid not null references public.prizes(id) on delete cascade,
+  name text not null,
+  image text,
+  sort int not null default 0
+);
+-- 코드는 비공개 (받은 본인만 함수로 확인)
+create table if not exists public.item_codes (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references public.prize_items(id) on delete cascade,
+  code text not null,
+  claimed_slot int,
+  claimed_slot_uid uuid,
+  claimed_by uuid,
+  claimed_name text,
+  claimed_at timestamptz
+);
+alter table public.item_codes add column if not exists claimed_slot_uid uuid;
+alter table public.slots add column if not exists uid uuid not null default gen_random_uuid();
+alter table public.slots add column if not exists item_id uuid;
+alter table public.slots add column if not exists item_name text;
+
+alter table public.prize_items enable row level security;
+alter table public.item_codes enable row level security;
+drop policy if exists "read" on public.prize_items;
+drop policy if exists "admin" on public.prize_items;
+drop policy if exists "admin" on public.item_codes;
+create policy "read" on public.prize_items for select using (true);
+create policy "admin" on public.prize_items for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin" on public.item_codes for all using (public.is_admin()) with check (public.is_admin());
+
+-- 아이템별 남은 수량 (코드가 하나도 없으면 무제한 = null)
+create or replace function public.item_stock()
+returns table (item_id uuid, total int, remaining int)
+language sql stable security definer set search_path = public as $$
+  select i.id,
+         count(c.id)::int,
+         case when count(c.id) = 0 then null else count(c.id) filter (where c.claimed_slot_uid is null)::int end
+  from public.prize_items i left join public.item_codes c on c.item_id = i.id
+  group by i.id;
+$$;
+grant execute on function public.item_stock() to anon, authenticated;
+
+-- 비밀번호 확인 공용
+create or replace function public.check_pin(p_member uuid, p_pin text)
+returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare v_hash text;
+begin
+  if p_pin is null or p_pin !~ '^[0-9]{4}$' then raise exception '비밀번호는 숫자 4자리로 입력해 주세요'; end if;
+  select pin_hash into v_hash from public.member_pins where member_id = p_member;
+  if v_hash is null or v_hash <> crypt(p_pin, v_hash) then raise exception '비밀번호가 틀렸어요'; end if;
+end $$;
+revoke all on function public.check_pin(uuid, text) from public, anon, authenticated;
+
+-- 아이템 고르기 → 코드 지급
+create or replace function public.choose_item(p_member uuid, p_pin text, p_slot int, p_item uuid)
+returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  sl public.slots;
+  it public.prize_items;
+  v_code public.item_codes;
+  has_codes boolean;
+begin
+  perform public.check_pin(p_member, p_pin);
+  select * into sl from public.slots where no = p_slot for update;
+  if not found or not sl.opened or sl.opened_by is distinct from p_member then
+    raise exception '내가 뽑은 쿠폰이 아니에요';
+  end if;
+  if sl.item_id is not null then
+    select * into v_code from public.item_codes where claimed_slot_uid = sl.uid limit 1;
+    return jsonb_build_object('item_id', sl.item_id, 'item_name', sl.item_name, 'code', v_code.code, 'already', true);
+  end if;
+  select * into it from public.prize_items where id = p_item;
+  if not found or it.prize_id <> sl.prize_id then raise exception '이 등급에서 고를 수 없는 아이템이에요'; end if;
+
+  select exists (select 1 from public.item_codes where item_id = p_item) into has_codes;
+  if has_codes then
+    select * into v_code from public.item_codes
+      where item_id = p_item and claimed_slot_uid is null
+      order by id limit 1 for update skip locked;
+    if not found then raise exception '그 아이템은 방금 다 나갔어요. 다른 걸 골라 주세요'; end if;
+    update public.item_codes
+       set claimed_slot = p_slot, claimed_slot_uid = sl.uid, claimed_by = p_member, claimed_at = now(),
+           claimed_name = (select name from public.members where id = p_member)
+     where id = v_code.id;
+  end if;
+  update public.slots set item_id = it.id, item_name = it.name where no = p_slot;
+  return jsonb_build_object('item_id', it.id, 'item_name', it.name, 'code', case when has_codes then v_code.code end);
+end $$;
+revoke all on function public.choose_item(uuid, text, int, uuid) from public;
+grant execute on function public.choose_item(uuid, text, int, uuid) to anon, authenticated;
+
+-- 내 당첨 · 코드 보기
+create or replace function public.my_wins(p_member uuid, p_pin text)
+returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform public.check_pin(p_member, p_pin);
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'no', s.no, 'prize_id', s.prize_id, 'grade', s.grade, 'name', s.name, 'color', s.color, 'image', s.image,
+      'item_id', s.item_id, 'item_name', s.item_name, 'opened_at', s.opened_at,
+      'code', (select c.code from public.item_codes c where c.claimed_slot_uid = s.uid limit 1)
+    ) order by s.opened_at desc)
+    from public.slots s where s.opened and s.opened_by = p_member), '[]'::jsonb)
+  -- 지난 판에서 받은 코드
+  || coalesce((
+    select jsonb_agg(jsonb_build_object('past', true, 'item_name', i.name, 'code', c.code, 'opened_at', c.claimed_at) order by c.claimed_at desc)
+    from public.item_codes c join public.prize_items i on i.id = c.item_id
+    where c.claimed_by = p_member and not exists (select 1 from public.slots s where s.uid = c.claimed_slot_uid)), '[]'::jsonb);
+end $$;
+revoke all on function public.my_wins(uuid, text) from public;
+grant execute on function public.my_wins(uuid, text) to anon, authenticated;
+
 -- ---------- 인증 사진 저장소 ----------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('proofs', 'proofs', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
@@ -305,7 +423,7 @@ create policy "kuji admin delete proofs" on storage.objects for delete
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','prizes','members','draws','slots'] loop
+  foreach t in array array['settings','prizes','members','draws','slots','prize_items'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when others then null;

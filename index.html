@@ -44,6 +44,8 @@
         <p class="hint" id="pinHint">처음 등록할 때 정한 숫자 4자리가 앞으로 내 비밀번호가 돼요.</p>
       </div></div>
 
+      <button class="btn ghost mywins" id="myWinsBtn" hidden>🎁 내 당첨 · 아이템 코드 보기</button>
+
       <div class="credit" id="creditBox" hidden>
         <div><small>내 뽑기권</small><b id="creditN">0</b><span>장</span></div>
         <button class="btn big" id="goPick">쿠지 고르러 가기</button>
@@ -100,6 +102,15 @@
   </div>
 </div>
 
+<!-- 내 당첨 · 코드 -->
+<div class="kmodal" id="winsModal" hidden role="dialog" aria-modal="true" aria-labelledby="winsTitle">
+  <div class="kbox kiosk wins">
+    <button class="kx" id="winsClose" aria-label="닫기">✕</button>
+    <div class="ki-head"><h2 id="winsTitle">내 당첨 · 아이템 코드</h2><p>아이템을 아직 안 골랐으면 여기서 고를 수 있어요.</p></div>
+    <div class="wins-list" id="winsList"></div>
+  </div>
+</div>
+
 <div class="modal" id="modal" hidden><img id="modalImg" alt="인증 사진"></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -109,7 +120,7 @@
 <script>
 {
 const {sb, ready, $, esc, art, photoUrl, toast, errMsg, fmtTime} = K;
-let S = null, prizes = [], members = [], draws = [], opened = new Map(), photoFile = null, busy = false;
+let S = null, prizes = [], members = [], draws = [], opened = new Map(), items = [], stock = new Map(), photoFile = null, busy = false;
 let picked = [], fresh = new Set(), lastResults = [];
 
 const me = () => members.find(m => m.id === $('who').value);
@@ -172,6 +183,8 @@ function renderMine() {
     $('pinLabel').textContent = m.has_pin ? '비밀번호 4자리' : '처음이야! 앞으로 쓸 비밀번호 4자리 정하기';
     $('pinHint').textContent = m.has_pin ? '처음 등록할 때 정한 숫자예요. 잊었으면 관리자에게 초기화 요청!' : '이 숫자를 기억해 둬요. 다음부터 이걸로 등록하고 뽑아요.';
     $('creditBox').hidden = !m.credits;
+    $('myWinsBtn').hidden = !(m.has_pin || opened.size);
+    $('myWinsBtn').disabled = !pinOk();
     $('creditN').textContent = m.credits;
     $('goPick').disabled = busy || !pinOk() || !left();
     $('goPick').textContent = pinOk() ? '쿠지 고르러 가기' : '비밀번호 넣고 쿠지 고르기';
@@ -179,7 +192,7 @@ function renderMine() {
       : !left() ? '쿠지가 전부 소진됐어요.'
       : !pinOk() ? (m.has_pin ? '위에 비밀번호 4자리를 넣어줘.' : '위에 앞으로 쓸 비밀번호 4자리를 정해줘.') : '';
     $('pickWhy').textContent = why; $('pickWhy').hidden = !why;
-  } else { $('myPts').innerHTML = ''; $('creditBox').hidden = true; }
+  } else { $('myPts').innerHTML = ''; $('creditBox').hidden = true; $('myWinsBtn').hidden = true; }
   if (size() && !left()) msg = '쿠지가 전부 소진됐어요!';
   if (!busy) $('regErr').textContent = msg;
   $('regBtn').disabled = busy || !m || !photoFile || !pinOk() || !!msg;
@@ -196,17 +209,20 @@ function renderFeed() {
 }
 
 async function load() {
-  const [a, b, c, d, e] = await Promise.all([
+  const [a, b, c, d, e, f, g] = await Promise.all([
     sb.from('settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('prizes').select('*').order('sort').order('id'),
     sb.from('members').select('id,name,base_gp,last_gp,used_gp,credits,has_pin'),
     sb.from('draws').select('*').order('created_at', {ascending: false}).limit(40),
-    sb.from('slots').select('no,prize_id,grade,name,color,image,opened_name,opened_at').eq('opened', true)
+    sb.from('slots').select('no,prize_id,grade,name,color,image,opened_name,opened_at,item_name').eq('opened', true),
+    sb.from('prize_items').select('*').order('sort'),
+    sb.rpc('item_stock')
   ]);
   const err = a.error || b.error || c.error || d.error || e.error;
   if (err) { $('status').textContent = '불러오지 못했어요: ' + errMsg(err); $('status').hidden = false; return; }
   S = a.data; prizes = b.data; members = c.data; draws = d.data;
   opened = new Map(e.data.map(x => [x.no, x]));
+  items = f.data || []; stock = new Map((g.data || []).map(x => [x.item_id, x.remaining]));
   $('status').hidden = true;
   renderBoard(); renderWho(); renderFeed();
   if (!$('pickModal').hidden && !$('pickStage').hidden) renderPile();
@@ -430,13 +446,15 @@ function showResult(r, tier) {
       ${tier !== 'normal' ? `<div class="fx-bits">${bits(tier === 'top' ? 60 : 24, 'conf', ['#f6b81a', '#fff', r.color, '#7be0ff'])}</div>` : ''}
     </div>
     <p class="res-name">${esc(r.grade)} · ${esc(r.name)}</p>
+    ${r.no && itemsOf(prizeIdOf(r)).length ? pickerHTML(r.no, prizeIdOf(r)) : ''}
   </div>`;
   $('result').hidden = false;
   phase = 'open';
   if (cur < lastResults.length - 1) {
-    if (autoAll) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
+    if (autoAll && !$('result').querySelector('.ipick')) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
     else { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠폰 (${cur + 2}/${lastResults.length})`; }
-  } else setTimeout(showSummary, autoAll ? 1600 : 1800);
+  } else if (!$('result').querySelector('.ipick')) setTimeout(showSummary, autoAll ? 1600 : 1800);
+  else { $('nextBtn').hidden = false; $('nextBtn').textContent = '결과 모아보기'; }
 }
 $('tktWrap').addEventListener('pointerdown', e => {
   if (phase !== 'closed') return;
@@ -461,6 +479,69 @@ const endDrag = () => {
 $('tktWrap').addEventListener('pointerup', endDrag);
 $('tktWrap').addEventListener('pointercancel', endDrag);
 $('tktWrap').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); autoSlide(); } });
+/* ---------- 선택 경품 (아이템 고르고 코드 받기) ---------- */
+const prizeIdOf = r => r.prize_id || prizes.find(p => p.grade === r.grade && p.name === r.name)?.id;
+const itemsOf = pid => items.filter(i => i.prize_id === pid);
+function codeBox(res) {
+  return `<div class="codebox"><small>받은 아이템</small><b class="cb-item">${esc(res.item_name)}</b>
+    ${res.code ? `<div class="cb-code"><code>${esc(res.code)}</code><button class="cb-copy" data-code="${esc(res.code)}">복사</button></div><p class="cb-note">이 코드는 나만 볼 수 있어요. 내 당첨에서 다시 볼 수 있어요.</p>`
+      : `<p class="cb-note">코드 없는 아이템이에요. 관리자가 지급해줄 거예요.</p>`}</div>`;
+}
+function pickerHTML(slotNo, pid) {
+  const list = itemsOf(pid);
+  return `<div class="ipick" data-slot="${slotNo}">
+    <p class="ipick-t">받을 아이템을 골라줘</p>
+    <div class="ipick-grid">${list.map(i => {
+      const left = stock.get(i.id), out = left === 0;
+      return `<button class="iopt" data-item="${esc(i.id)}" ${out ? 'disabled' : ''}>
+        ${i.image ? `<img src="${esc(i.image)}" alt="">` : '<span class="iopt-ph">🎁</span>'}
+        <span class="iopt-nm">${esc(i.name)}</span><span class="iopt-left">${left == null ? '수량 제한 없음' : out ? '품절' : `남은 ${left}개`}</span></button>`;
+    }).join('')}</div>
+    <button class="ki-go ipick-go" disabled>이걸로 받기</button>
+    <p class="ki-err ipick-err"></p>
+  </div>`;
+}
+async function chooseItem(box) {
+  const sel = box.querySelector('.iopt.on'); if (!sel) return;
+  const go = box.querySelector('.ipick-go'), err = box.querySelector('.ipick-err');
+  go.disabled = true; go.textContent = '받는 중…'; err.textContent = '';
+  const {data, error} = await sb.rpc('choose_item', {p_member: me().id, p_pin: $('pin').value, p_slot: +box.dataset.slot, p_item: sel.dataset.item});
+  if (error) {
+    err.textContent = errMsg(error); go.textContent = '이걸로 받기'; go.disabled = false;
+    const g = await sb.rpc('item_stock'); if (!g.error) stock = new Map(g.data.map(x => [x.item_id, x.remaining]));
+    return;
+  }
+  sfx('high');
+  box.outerHTML = codeBox(data);
+  const g = await sb.rpc('item_stock'); if (!g.error) stock = new Map(g.data.map(x => [x.item_id, x.remaining]));
+}
+document.addEventListener('click', async e => {
+  const opt = e.target.closest('.iopt');
+  if (opt && !opt.disabled) {
+    const box = opt.closest('.ipick');
+    box.querySelectorAll('.iopt').forEach(b => b.classList.toggle('on', b === opt));
+    box.querySelector('.ipick-go').disabled = false;
+    return;
+  }
+  const go = e.target.closest('.ipick-go'); if (go) { chooseItem(go.closest('.ipick')); return; }
+  const cp = e.target.closest('.cb-copy');
+  if (cp) { try { await navigator.clipboard.writeText(cp.dataset.code); cp.textContent = '복사됨!'; } catch (er) { cp.textContent = '길게 눌러 복사'; } setTimeout(() => cp.textContent = '복사', 1600); }
+});
+async function openWins() {
+  const m = me(); if (!m || !pinOk()) return;
+  $('winsList').innerHTML = '<p class="wins-empty">불러오는 중…</p>';
+  $('winsModal').hidden = false; document.body.style.overflow = 'hidden';
+  const {data, error} = await sb.rpc('my_wins', {p_member: m.id, p_pin: $('pin').value});
+  if (error) { $('winsList').innerHTML = `<p class="ki-err">${esc(errMsg(error))}</p>`; return; }
+  const cur = data.filter(w => !w.past), past = data.filter(w => w.past);
+  $('winsList').innerHTML = (cur.length ? cur.map(w => `<div class="win" style="--c:${esc(w.color)}">
+      <div class="win-h">${w.image ? `<img src="${esc(w.image)}" alt="">` : ''}<span class="gold-g"><b>${esc(letter(w.grade))}</b><small>상</small></span><span class="win-nm">${esc(w.name)}</span><span class="win-no">${w.no}번</span></div>
+      ${w.item_name ? codeBox(w) : itemsOf(w.prize_id).length ? pickerHTML(w.no, w.prize_id) : ''}
+    </div>`).join('') : '<p class="wins-empty">이번 판에서 뽑은 쿠폰이 아직 없어요.</p>')
+    + (past.length ? `<h3 class="wins-past">지난 판에서 받은 코드</h3>` + past.map(w => `<div class="win past">${codeBox(w)}</div>`).join('') : '');
+}
+function closeWins() { $('winsModal').hidden = true; document.body.style.overflow = ''; }
+
 function showSummary() {
   $('stage').hidden = true; $('result').hidden = true; $('nextBtn').hidden = true;
   $('summary').innerHTML = `<h3>이번에 뽑은 쿠폰</h3><div class="sum-grid">${lastResults.map(r => `<div class="sum ${tierOf(r)}" style="--c:${esc(r.color)}">
@@ -502,7 +583,9 @@ $('pickRand').addEventListener('click', () => {
   renderPile();
 });
 $('tearBtn').addEventListener('click', doTear);
-$('nextBtn').addEventListener('click', () => { if (phase === 'open') { cur++; showTicket(); } });
+$('nextBtn').addEventListener('click', () => { if (phase !== 'open') return; if (cur >= lastResults.length - 1) showSummary(); else { cur++; showTicket(); } });
+$('myWinsBtn').addEventListener('click', openWins);
+$('winsClose').addEventListener('click', closeWins);
 $('openBtn').addEventListener('click', autoSlide);
 $('autoBtn').addEventListener('click', () => { autoAll = true; autoSlide(); });
 $('stickBtn').addEventListener('click', stick);

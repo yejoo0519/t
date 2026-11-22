@@ -265,7 +265,13 @@ function renderPile() {
   let h = '';
   for (let n = 1; n <= size(); n++) {
     const o = opened.get(n);
-    if (o) { h += `<div class="cp done" title="${esc(o.grade)} ${esc(o.name)} · ${esc(o.opened_name)}"><span class="cp-g"><b>${esc(letter(o.grade))}</b><small>상</small></span></div>`; continue; }
+    if (o) {
+      const p = prizes.find(x => x.id === o.prize_id) || {}, g = o.grade || p.grade || '', nm = o.name || p.name || '', img = o.image || p.image, col = o.color || p.color || '#888';
+      h += `<div class="cp done" style="--c:${esc(col)}" title="${n}번 · ${esc(g)} ${esc(nm)} · ${esc(o.opened_name || '')}">
+        ${img ? `<img class="cp-img" src="${esc(img)}" alt="">` : ''}
+        <span class="cp-gw"><span class="cp-g"><b>${esc(letter(g))}</b><small>상</small></span><span class="cp-nm">${esc(nm)}</span></span></div>`;
+      continue;
+    }
     const i = picked.indexOf(n);
     h += `<button class="cp ${i >= 0 ? 'on' : ''}" data-n="${n}" aria-pressed="${i >= 0}" aria-label="${n}번 쿠폰"><span class="cp-tab"><i></i></span><span class="cp-logo"><span>쿠지</span></span><span class="cp-bar"></span>${i >= 0 ? `<em>${i + 1}</em>` : ''}</button>`;
   }

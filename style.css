@@ -429,7 +429,12 @@ button.kc:hover{transform:translateY(-3px)}
 button.cp:hover{transform:translateY(-2px)}
 .cp.on{transform:translateY(-3px) scale(1.05);box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #f2661a,0 0 0 3px #59f0ff,0 0 16px 4px rgba(89,240,255,.65)}
 .cp em{position:absolute;right:-7px;top:-8px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-style:normal;font-family:"Black Han Sans";font-size:13px;background:#59f0ff;color:#06303a;box-shadow:0 0 0 2px #fff}
-.cp.done{cursor:default;background:linear-gradient(180deg,#4b4e5a,#30323b);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18),0 3px 0 #1c1d23;display:grid;place-items:center}
+.cp.done{cursor:default;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 6px 0 14%;
+  background:linear-gradient(180deg,#4b4e5a,#30323b);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c) 70%,#fff),0 3px 0 #1c1d23}
+.cp-img{flex:none;width:34%;max-height:78%;object-fit:contain;border-radius:6px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.cp-gw{display:flex;flex-direction:column;align-items:flex-start;min-width:0;line-height:1}
+.cp-g b{color:color-mix(in srgb,var(--c) 45%,#fff)}
+.cp-nm{max-width:100%;margin-top:2px;font-size:10px;font-weight:700;color:#d6d7e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cp.done::before{content:"";position:absolute;left:0;top:18%;bottom:18%;width:16%;border-radius:0 999px 999px 0;background:#23252c}
 .cp-g{display:flex;align-items:baseline;gap:1px;color:#e9e9ef;line-height:1}
 .cp-g b{font-family:"Black Han Sans";font-weight:400;font-size:clamp(18px,2.6vw,24px)}

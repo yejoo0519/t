@@ -119,7 +119,7 @@
 <script src="common.js"></script>
 <script>
 {
-const {sb, ready, $, esc, art, photoUrl, toast, errMsg, fmtTime} = K;
+const {sb, ready, $, esc, art, photoUrl, toast, errMsg, fmtTime, loadDragons, findDragon} = K;
 let S = null, prizes = [], members = [], draws = [], opened = new Map(), items = [], stock = new Map(), photoFile = null, busy = false;
 let picked = [], fresh = new Set(), lastResults = [];
 
@@ -169,8 +169,11 @@ function renderBoard() {
     <div class="pr-l">${logo(p)}<div class="pr-name">${its(p).length ? '' : p.image ? `<img src="${esc(p.image)}" alt="">` : ''}<p class="pname">${esc(p.name)}</p>${ilist(p)}</div></div>
     <div class="pr-b"><div class="paste">${tix(p)}</div>${count(p)}</div>
     ${done(p)}</div>`).join('');
-  $('lastOne').innerHTML = S?.last_one_name ? `<div class="last"><span class="disp">LAST ONE</span><span style="flex:1">${esc(S.last_one_name)}</span>
-    <b>${S.last_one_winner_name ? esc(S.last_one_winner_name) + ' 당첨!' : '마지막 한 장을 뽑은 사람에게'}</b></div>` : '';
+  const loImg = S?.last_one_name ? findDragon(S.last_one_name)?.url : null;
+  $('lastOne').innerHTML = S?.last_one_name ? `<div class="last ${S.last_one_winner_name ? 'won' : ''}">
+    <div class="lo-art">${loImg ? `<img src="${esc(loImg)}" alt="">` : '<b class="lo-q">★</b>'}</div>
+    <div class="lo-txt"><span class="disp">LAST ONE</span><p class="lo-name">${esc(S.last_one_name)}</p>
+    <b class="lo-who">${S.last_one_winner_name ? '🏆 ' + esc(S.last_one_winner_name) + ' 당첨!' : '마지막 한 장을 뽑은 사람에게'}</b></div></div>` : '';
 }
 
 /* ---------- 길포 등록 ---------- */
@@ -607,6 +610,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('pickMo
 if (!ready) { $('setupNote').hidden = false; $('status').hidden = true; }
 else {
   load();
+  loadDragons().then(() => { if (S) renderBoard(); });
   let t;
   const later = () => { clearTimeout(t); t = setTimeout(() => { if (!busy) load(); }, 400); };
   sb.channel('kuji').on('postgres_changes', {event: '*', schema: 'public'}, later).subscribe();

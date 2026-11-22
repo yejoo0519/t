@@ -660,3 +660,20 @@ button.cp:hover{transform:translateY(-2px)}
   .pr-name .pname{font-size:19px}
   .pr-b .paste{margin-left:8px}
 }
+
+/* 라스트원: 상품 보이게 */
+.last{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:6px 18px;padding:14px 20px 14px 14px}
+.lo-art{position:relative;display:grid;place-items:center;width:120px;height:120px;border-radius:50%;isolation:isolate}
+.lo-art::before{content:"";position:absolute;inset:-6px;z-index:-1;border-radius:50%;
+  background:repeating-conic-gradient(from 0deg,rgba(246,184,26,.55) 0 8deg,transparent 8deg 20deg);animation:rays 10s linear infinite;
+  -webkit-mask:radial-gradient(circle,#000 40%,transparent 70%);mask:radial-gradient(circle,#000 40%,transparent 70%)}
+.lo-art::after{content:"";position:absolute;inset:14px;z-index:-1;border-radius:50%;background:radial-gradient(circle,#6b4a12,#2a1608);box-shadow:0 0 0 3px #f6b81a,0 0 18px 4px rgba(246,184,26,.55)}
+.lo-art img{width:88px;height:88px;border-radius:50%;object-fit:cover;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
+.lo-q{font-size:54px;color:#f6b81a}
+.lo-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.last .disp{font-size:26px;color:var(--gold);text-shadow:0 2px 0 #7a4f00;line-height:1}
+.lo-name{margin:0;font-family:"Black Han Sans";font-weight:400;font-size:clamp(22px,3vw,30px);line-height:1.15;color:#fff;overflow-wrap:anywhere}
+.lo-who{color:var(--gold);font-size:15px}
+.last.won .lo-art img{filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)) grayscale(.2)}
+@media(max-width:520px){.lo-art{width:92px;height:92px}.lo-art img{width:66px;height:66px}}
+@media(prefers-reduced-motion:reduce){.lo-art::before{animation:none}}

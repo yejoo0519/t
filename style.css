@@ -546,14 +546,3 @@ button.cp:hover{transform:translateY(-2px)}
 .res .fx-bits{top:40%}
 .kiosk .summary{margin:18px}
 @media(prefers-reduced-motion:reduce){.cpn,.cpn-guide,.cpn-edge,.bokeh,.kiosk .fire,.res-band,.res-pillar,.res-ring i,.res-hero,.cpn.opened .cpn-under .gold-g{animation:none!important}}
-
-/* 다 벗기기 전에는 결과 비공개: 은박 홀로그램만 보임 */
-.cpn:not(.opened) .cpn-under .gold-g,.cpn:not(.opened) .cpn-last{opacity:0;transform:scale(.2)}
-.cpn:not(.opened) .cpn-under{background:
-  repeating-linear-gradient(115deg,rgba(255,255,255,.0) 0 14px,rgba(255,255,255,.55) 16px,rgba(255,255,255,0) 20px 34px),
-  linear-gradient(125deg,#cfd3e6,#f5f6fb 22%,#d9c8ff 38%,#bfe9ff 54%,#ffd9ec 70%,#c3c8e2 86%,#eef0f8);
-  background-size:200% 100%,100% 100%;animation:holo 1.6s linear infinite}
-@keyframes holo{to{background-position:-200% 0,0 0}}
-.cpn.opened .cpn-under .gold-g{transition:transform .55s cubic-bezier(.3,1.9,.5,1),opacity .2s}
-.cpn.opened .cpn-last{transition:opacity .3s .2s}
-@media(prefers-reduced-motion:reduce){.cpn:not(.opened) .cpn-under{animation:none}}

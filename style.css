@@ -628,3 +628,35 @@ button.cp:hover{transform:translateY(-2px)}
 .cb-warn{margin:10px auto 0;display:inline-block;padding:6px 14px;border-radius:999px;background:#e2312f;color:#fff;font-weight:800;font-size:14px;box-shadow:0 3px 0 #9c1a1f;animation:warnpulse 1.6s ease-in-out infinite}
 @keyframes warnpulse{50%{transform:scale(1.04)}}
 @media(prefers-reduced-motion:reduce){.cb-warn{animation:none}}
+
+/* 하위상 줄: 상품 리스트 위(넓게), 당첨권 띠 + 남은 수량 스티커 아래(스티커는 오른쪽 아래) */
+.pr,.layout .pr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l l" "s c";align-items:end;row-gap:10px;padding:16px 4px 16px 0}
+.pr-l{grid-area:l;align-items:flex-start;gap:10px;min-height:0}
+.pr-l .glogo{margin-top:2px}
+.pr-name{flex:1;align-items:stretch}
+.pr-name>img{align-self:flex-start}
+.pr-name .pname{text-align:left;font-size:22px}
+.pr-b{display:contents}
+.pr-b .paste{grid-area:s;margin:0 0 0 8px;min-height:56px}
+.pr-b .seal{grid-area:c;position:relative;right:auto;top:auto;margin:0 8px 0 0;align-self:end;justify-self:end}
+.pr .ilist{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:7px;margin:8px 0 0;justify-content:stretch}
+.pr .ilist li{font-size:14px;padding:5px 10px 5px 5px;gap:7px;border-radius:12px}
+.pr .ilist li img{width:34px;height:34px;border-radius:8px;background:#fff}
+.pr .ilist li span{flex:1}
+.pr .ilist li small{font-size:12px}
+.pc .ilist li{font-size:13px;padding:4px 10px 4px 4px}
+.pc .ilist li img{width:28px;height:28px}
+.pr .stamp{left:auto;right:120px;top:auto;bottom:22px;transform:rotate(-10deg)}
+@media(max-width:640px){
+  .pr .ilist{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pr .ilist li{font-size:13px}.pr .ilist li img{width:28px;height:28px}
+  .pr-b .seal{width:70px;height:70px}.pr-b .seal b{font-size:26px}
+  .pr .stamp{right:90px;bottom:18px}
+}
+@media(max-width:640px){
+  .pr-l{flex-wrap:wrap;padding-left:8px}
+  .pr-name{flex-direction:column;align-items:stretch;flex-basis:100%}
+  .pr-l .glogo{flex:none}
+  .pr-name .pname{font-size:19px}
+  .pr-b .paste{margin-left:8px}
+}

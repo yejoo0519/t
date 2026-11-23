@@ -682,3 +682,10 @@ button.cp:hover{transform:translateY(-2px)}
 .snap:hover{background:rgba(0,0,0,.3)}.snap:disabled{opacity:.6;cursor:wait}
 .seal em,.seal small{white-space:nowrap}
 .pop-head h2{white-space:nowrap;flex:none}.pop-head{position:relative;z-index:3}
+.gpbar{position:relative;flex-basis:100%;height:26px;margin-top:6px;border-radius:999px;background:var(--soft);box-shadow:inset 0 0 0 1.5px var(--line);overflow:hidden}
+.gpbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#f6b81a,#e2312f)}
+.gpbar span{position:relative;display:block;text-align:center;line-height:26px;font-size:13px;font-weight:700;color:var(--ink)}
+.vres-get.short{background:linear-gradient(180deg,#ffd6cf,#ffb3a6);color:#7a1a10}
+.vres-get.short b{font-size:34px}
+.vres-bar{padding:10px 14px 14px;background:#1b1416}
+.vres-bar .gpbar{background:#3a2a2d;box-shadow:none}.vres-bar .gpbar span{color:#fff}

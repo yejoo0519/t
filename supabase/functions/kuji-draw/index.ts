@@ -118,5 +118,6 @@ Deno.serve(async (req) => {
     p_member: member, p_pin: pin, p_photo: photo, p_gp: read.gp,
   });
   if (error) { await drop(); return fail(error.message, { gp: read.gp }); }
+  if (!data?.granted) await drop(); // 미달이면 사진은 지움 (다음에 새 스샷으로 다시 인증)
   return reply({ ok: true, gp: read.gp, ...data });
 });

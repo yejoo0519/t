@@ -113,7 +113,10 @@ begin
     raise exception '쿠지가 전부 소진됐어요';
   end if;
   if add < 1 then
-    raise exception '늘어난 GP가 부족해요 (사용 가능 GP: %, 1장에 %)', avail, s.cost;
+    -- 미달: 뽑기권 없이 인증 GP만 기록하고 현황을 돌려줌
+    update public.members set last_gp = p_gp where id = p_member;
+    return jsonb_build_object('granted', 0, 'credits', m.credits, 'gp', p_gp, 'gained', p_gp - m.base_gp,
+                              'avail', avail, 'carry', avail, 'cost', s.cost, 'need', s.cost - avail);
   end if;
 
   update public.members
@@ -123,7 +126,8 @@ begin
     values (p_member, m.name, p_photo, p_gp, '[]'::jsonb, add, add * s.cost);
 
   return jsonb_build_object('granted', add, 'credits', m.credits + add, 'gp', p_gp,
-                            'gained', p_gp - m.base_gp, 'carry', avail - add * s.cost);
+                            'gained', p_gp - m.base_gp, 'avail', avail, 'carry', avail - add * s.cost,
+                            'cost', s.cost, 'need', s.cost - (avail - add * s.cost));
 end $$;
 revoke all on function public.grant_credits(uuid, text, text, int) from public, anon, authenticated;
 grant execute on function public.grant_credits(uuid, text, text, int) to service_role;

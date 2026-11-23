@@ -191,9 +191,10 @@ function renderMine() {
   const m = me(), cost = S?.cost || 0;
   let msg = '';
   if (m) {
-    const need = m.base_gp + m.used_gp + cost;
+    const need = m.base_gp + m.used_gp + cost, have = Math.max(0, m.last_gp - m.base_gp - m.used_gp);
     $('myPts').innerHTML = `<span>기준 <b>${m.base_gp.toLocaleString()}</b></span><span>최근 인증 <b>${m.last_gp.toLocaleString()}</b></span>`
-      + (cost ? `<span>다음 뽑기권: GP <b>${need.toLocaleString()}</b> 이상</span>` : '');
+      + (cost ? `<span>다음 뽑기권: GP <b>${need.toLocaleString()}</b> 이상</span>
+        <div class="gpbar"><i style="width:${Math.min(100, have / cost * 100)}%"></i><span>모은 GP <b>${have.toLocaleString()}</b> / ${cost.toLocaleString()}</span></div>` : '');
     $('pinLabel').textContent = m.has_pin ? '비밀번호 4자리' : '처음이야! 앞으로 쓸 비밀번호 4자리 정하기';
     $('pinHint').textContent = m.has_pin ? '처음 등록할 때 정한 숫자예요. 잊었으면 관리자에게 초기화 요청!' : '이 숫자를 기억해 둬요. 다음부터 이걸로 등록하고 뽑아요.';
     $('creditBox').hidden = !m.credits;
@@ -209,7 +210,7 @@ function renderMine() {
   } else { $('myPts').innerHTML = ''; $('creditBox').hidden = true; $('myWinsBtn').hidden = true; }
   if (size() && !left()) msg = '쿠지가 전부 소진됐어요!';
   if (!busy) $('regErr').textContent = msg;
-  $('regBtn').disabled = busy || !m || !photoFile || !pinOk() || !!msg;
+  $('regBtn').disabled = busy;
 }
 
 function renderFeed() {
@@ -255,7 +256,8 @@ async function shrink(file) {
 
 async function doRegister() {
   const m = me(), pin = $('pin').value;
-  if (!m || !photoFile || !pinOk()) return;
+  const miss = !m ? '닉네임을 먼저 골라줘.' : !pinOk() ? '비밀번호 4자리를 넣어줘.' : !photoFile ? 'GP 인증 스샷을 올려줘.' : size() && !left() ? '쿠지가 전부 소진됐어요.' : '';
+  if (miss) { $('regErr').textContent = miss; return; }
   busy = true; $('regErr').textContent = ''; $('vres').hidden = true; $('regBtn').textContent = '사진 올리는 중…'; renderMine();
   try {
     const blob = await shrink(photoFile);
@@ -268,11 +270,14 @@ async function doRegister() {
     if (error) throw new Error('서버 함수 호출 실패: ' + errMsg(error));
     if (!data.ok) throw new Error((data.gp != null ? `읽은 GP ${data.gp.toLocaleString()} — ` : '') + data.error);
     try { localStorage.setItem('kuji-who', m.id); } catch (e) {}
+    const pct = Math.min(100, (data.cost - data.need) / data.cost * 100);
     $('vres').innerHTML = `<div class="vres-top"><span>인식된 GP</span><b>${data.gp.toLocaleString()}</b></div>
       <dl><div><dt>기준 GP</dt><dd>${(data.gp - data.gained).toLocaleString()}</dd></div>
           <div><dt>늘어난 GP</dt><dd>+${data.gained.toLocaleString()}</dd></div>
           <div><dt>다음으로 이월</dt><dd>${data.carry.toLocaleString()} GP</dd></div></dl>
-      <div class="vres-get"><span>받은 뽑기권</span><b>${data.granted}</b><span>장</span></div>`;
+      ${data.granted ? `<div class="vres-get"><span>받은 뽑기권</span><b>${data.granted}</b><span>장</span></div>`
+        : `<div class="vres-get short"><span>아직 미달이에요</span><b>${data.need.toLocaleString()}</b><span>GP 더 모으면 1장</span></div>`}
+      <div class="vres-bar"><div class="gpbar"><i style="width:${pct}%"></i><span>다음 뽑기권까지 <b>${(data.cost - data.need).toLocaleString()}</b> / ${data.cost.toLocaleString()} GP</span></div></div>`;
     $('vres').hidden = false;
     photoFile = null; $('photo').value = ''; $('dropT').textContent = '탭해서 사진 올리기'; $('dropL').querySelector('img')?.remove();
     await load();

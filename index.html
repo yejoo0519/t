@@ -614,8 +614,14 @@ $('snapBtn').addEventListener('click', async () => {
   b.disabled = true; b.textContent = '만드는 중…';
   try {
     if (!window.modernScreenshot) await loadScript('https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js');
+    // 캡처용 폰트: 같은 사이트에 올려둔 파일을 data URL로 직접 넣어서 글꼴이 깨지지 않게
+    const toData = async f => { const blob = await (await fetch(new URL('fonts/' + f, location.href))).blob(); return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }); };
+    const ff = async (fam, w, f) => `@font-face{font-family:"${fam}";font-weight:${w};src:url(${await toData(f)}) format("woff2")}`;
+    const cssText = (await Promise.all([ff('Black Han Sans', 400, 'black-han-sans-latin-400-normal.woff2'), ff('Black Han Sans', 400, 'black-han-sans-korean-400-normal.woff2'),
+      ...[400, 700, 800].flatMap(w => [ff('Noto Sans KR', w, `noto-sans-kr-latin-${w}-normal.woff2`), ff('Noto Sans KR', w, `noto-sans-kr-korean-${w}-normal.woff2`)])])).join('');
+    await document.fonts.ready;
     const url = await modernScreenshot.domToPng($('pop'), {
-      scale: 2,
+      scale: 2, font: {cssText},
       filter: n => !(n instanceof Element && n.id === 'snapBtn'),
       fetch: {requestInit: {mode: 'cors', cache: 'no-cache'}}
     });

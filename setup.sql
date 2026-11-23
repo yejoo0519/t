@@ -327,21 +327,13 @@ create policy "read" on public.prize_items for select using (true);
 create policy "admin" on public.prize_items for all using (public.is_admin()) with check (public.is_admin());
 create policy "admin" on public.item_codes for all using (public.is_admin()) with check (public.is_admin());
 
--- 같은 아이템에 같은 코드 중복 방지 (기존 중복은 하나만 남김, 지급된 건 유지)
+-- 같은 아이템에 "아직 안 나간" 같은 코드 중복 방지 (지급된 코드는 다시 넣어 재사용 가능)
 delete from public.item_codes a
  where a.claimed_slot_uid is null
    and exists (select 1 from public.item_codes b
-                where b.item_id = a.item_id and b.code = a.code and b.id <> a.id
-                  and (b.claimed_slot_uid is not null or b.id < a.id));
-do $$ begin
-  create unique index if not exists item_codes_item_code_uq on public.item_codes (item_id, code);
-exception when others then null; end $$;
-
--- 라스트원 코드 등 비공개 값 (관리자만 읽기/쓰기)
-create table if not exists public.kuji_secrets (key text primary key, value text);
-alter table public.kuji_secrets enable row level security;
-drop policy if exists "admin" on public.kuji_secrets;
-create policy "admin" on public.kuji_secrets for all using (public.is_admin()) with check (public.is_admin());
+                where b.item_id = a.item_id and b.code = a.code and b.id < a.id and b.claimed_slot_uid is null);
+drop index if exists public.item_codes_item_code_uq;
+create unique index if not exists item_codes_unclaimed_uq on public.item_codes (item_id, code) where claimed_slot_uid is null;
 
 -- 아이템별 남은 수량 (코드가 하나도 없으면 무제한 = null)
 create or replace function public.item_stock()

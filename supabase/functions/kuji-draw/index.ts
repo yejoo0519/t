@@ -65,7 +65,6 @@ async function readGp(img: Uint8Array, mime: string, name: string): Promise<Read
     body: JSON.stringify({
       model,
       max_tokens: 300,
-      temperature: 0,
       messages: [{
         role: "user",
         content: [

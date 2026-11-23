@@ -270,6 +270,10 @@ async function doRegister() {
     if (error) {
       let detail = '';
       try { detail = await error.context?.text?.(); } catch (e2) {}
+      if (!detail) { // 연결 자체가 안 됐을 때: 직접 찔러서 상태 확인
+        try { const r = await fetch(`${KUJI_CONFIG.url}/functions/v1/kuji-draw`, {method: 'OPTIONS'}); detail = `함수 응답 ${r.status}`; }
+        catch (e3) { detail = '함수에 연결 불가 (배포·이름 확인)'; }
+      }
       throw new Error('서버 함수 호출 실패: ' + errMsg(error) + (detail ? ` (${String(detail).slice(0, 160)})` : ''));
     }
     if (!data.ok) throw new Error((data.gp != null ? `읽은 GP ${data.gp.toLocaleString()} — ` : '') + data.error);

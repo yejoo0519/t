@@ -4,10 +4,11 @@
 // 필요한 Secret: ANTHROPIC_API_KEY  (선택: CLAUDE_MODEL, 기본 claude-sonnet-5-5)
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
-const CORS = {
+let CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-region, x-supabase-api-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 const reply = (body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { headers: { ...CORS, "Content-Type": "application/json" } });
@@ -94,7 +95,18 @@ function serverKey(): string {
 }
 
 Deno.serve(async (req) => {
+  // 브라우저가 요청한 헤더를 그대로 허용 (supabase-js 버전에 따라 헤더가 달라서)
+  const asked = req.headers.get("access-control-request-headers");
+  if (asked) CORS = { ...CORS, "Access-Control-Allow-Headers": asked };
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  try {
+    return await handle(req);
+  } catch (e) {
+    return fail("서버 오류: " + (e instanceof Error ? e.message : String(e)));
+  }
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== "POST") return fail("POST만 돼요");
 
   let body: { member?: string; pin?: string; photo?: string };
@@ -132,4 +144,4 @@ Deno.serve(async (req) => {
   if (error) { await drop(); return fail(error.message, { gp: read.gp }); }
   if (!data?.granted) await drop(); // 미달이면 사진은 지움 (다음에 새 스샷으로 다시 인증)
   return reply({ ok: true, gp: read.gp, ...data });
-});
+}

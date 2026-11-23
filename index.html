@@ -266,12 +266,12 @@ async function doRegister() {
     const up = await sb.storage.from('proofs').upload(path, blob, {contentType: blob.type || 'image/jpeg'});
     if (up.error) throw new Error('사진 업로드 실패: ' + errMsg(up.error));
     $('regBtn').textContent = '스샷에서 GP 읽는 중…';
-    const {data, error} = await sb.functions.invoke('kuji-draw', {body: {member: m.id, pin, photo: path}});
+    const {data, error} = await sb.functions.invoke(KUJI_CONFIG.fn || 'kuji-draw', {body: {member: m.id, pin, photo: path}});
     if (error) {
       let detail = '';
       try { detail = await error.context?.text?.(); } catch (e2) {}
       if (!detail) { // 연결 자체가 안 됐을 때: 직접 찔러서 상태 확인
-        try { const r = await fetch(`${KUJI_CONFIG.url}/functions/v1/kuji-draw`, {method: 'OPTIONS'}); detail = `함수 응답 ${r.status}`; }
+        try { const r = await fetch(`${KUJI_CONFIG.url}/functions/v1/${KUJI_CONFIG.fn || 'kuji-draw'}`, {method: 'OPTIONS'}); detail = `함수 응답 ${r.status}`; }
         catch (e3) { detail = '함수에 연결 불가 (배포·이름 확인)'; }
       }
       throw new Error('서버 함수 호출 실패: ' + errMsg(error) + (detail ? ` (${String(detail).slice(0, 160)})` : ''));

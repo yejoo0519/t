@@ -3,5 +3,6 @@
 // service_role key 는 절대 여기 넣지 마!
 window.KUJI_CONFIG = {
   url: "https://yevbwmznscqqtcdpqaol.supabase.co",
-  anonKey: "sb_publishable_tyVCPEuerIPDBFFv2WAecA_D0pIsDgf"
+  anonKey: "sb_publishable_tyVCPEuerIPDBFFv2WAecA_D0pIsDgf",
+  fn: "clever-service"   // Edge Function 주소(slug). 대시보드에서 이름만 kuji-draw로 바꿔서 주소는 이대로
 };

@@ -22,7 +22,7 @@
   <section class="pop" id="pop" aria-label="쿠지판">
     <div class="pop-head">
       <h2>쿠지판</h2>
-      <div class="pop-tools"><button class="snap" id="snapBtn">📸 이미지 저장</button><div class="pop-left"><span>남은 쿠지</span><b id="popLeft">–</b></div></div>
+      <div class="pop-tools"><button class="snap" id="snapBtn" hidden>📸 이미지 저장</button><div class="pop-left"><span>남은 쿠지</span><b id="popLeft">–</b></div></div>
     </div>
     <div class="pop-top" id="popTop"></div>
     <div class="pop-rows" id="popRows"></div>
@@ -610,7 +610,7 @@ $('modal').addEventListener('click', () => $('modal').hidden = true);
 /* ---------- 쿠지판 이미지로 저장 ---------- */
 function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
 $('snapBtn').addEventListener('click', async () => {
-  const b = $('snapBtn'); if (b.disabled) return;
+  const b = $('snapBtn'); if (b.disabled || b.hidden) return;
   b.disabled = true; b.textContent = '만드는 중…';
   try {
     if (!window.modernScreenshot) await loadScript('https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js');
@@ -633,6 +633,12 @@ if (!ready) { $('setupNote').hidden = false; $('status').hidden = true; }
 else {
   load();
   loadDragons().then(() => { if (S) renderBoard(); });
+  // 관리자로 로그인한 브라우저에서만 '이미지 저장' 버튼 표시
+  sb.auth.getSession().then(async ({data}) => {
+    if (!data?.session) return;
+    const {data: ok} = await sb.rpc('is_admin');
+    if (ok) $('snapBtn').hidden = false;
+  }).catch(() => {});
   let t;
   const later = () => { clearTimeout(t); t = setTimeout(() => { if (!busy) load(); }, 400); };
   sb.channel('kuji').on('postgres_changes', {event: '*', schema: 'public'}, later).subscribe();

@@ -677,3 +677,6 @@ button.cp:hover{transform:translateY(-2px)}
 .last.won .lo-art img{filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)) grayscale(.2)}
 @media(max-width:520px){.lo-art{width:92px;height:92px}.lo-art img{width:66px;height:66px}}
 @media(prefers-reduced-motion:reduce){.lo-art::before{animation:none}}
+.pop-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.snap{min-height:40px;padding:6px 14px;border:2px solid rgba(255,255,255,.75);border-radius:999px;background:rgba(0,0,0,.18);color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+.snap:hover{background:rgba(0,0,0,.3)}.snap:disabled{opacity:.6;cursor:wait}

@@ -22,7 +22,7 @@
   <section class="pop" id="pop" aria-label="쿠지판">
     <div class="pop-head">
       <h2>쿠지판</h2>
-      <div class="pop-left"><span>남은 쿠지</span><b id="popLeft">–</b></div>
+      <div class="pop-tools"><button class="snap" id="snapBtn">📸 이미지 저장</button><div class="pop-left"><span>남은 쿠지</span><b id="popLeft">–</b></div></div>
     </div>
     <div class="pop-top" id="popTop"></div>
     <div class="pop-rows" id="popRows"></div>
@@ -606,6 +606,27 @@ $('autoBtn').addEventListener('click', () => { autoAll = true; autoSlide(); });
 $('stickBtn').addEventListener('click', stick);
 $('feed').addEventListener('click', e => { const u = e.target.dataset.full; if (u) { $('modalImg').src = u; $('modal').hidden = false; } });
 $('modal').addEventListener('click', () => $('modal').hidden = true);
+
+/* ---------- 쿠지판 이미지로 저장 ---------- */
+function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
+$('snapBtn').addEventListener('click', async () => {
+  const b = $('snapBtn'); if (b.disabled) return;
+  b.disabled = true; b.textContent = '만드는 중…';
+  try {
+    if (!window.modernScreenshot) await loadScript('https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js');
+    const url = await modernScreenshot.domToPng($('pop'), {
+      scale: 2,
+      filter: n => !(n instanceof Element && n.id === 'snapBtn'),
+      fetch: {requestInit: {mode: 'cors', cache: 'no-cache'}}
+    });
+    const d = new Date(), name = `쿠지판_${d.getMonth() + 1}월${d.getDate()}일_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.png`;
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    $('modalImg').src = url; $('modal').hidden = false;
+    toast('쿠지판 이미지를 저장했어요 (안 받아지면 이미지를 길게 눌러 저장)');
+  } catch (e) {
+    toast('이미지 만들기 실패: ' + errMsg(e));
+  } finally { b.disabled = false; b.textContent = '📸 이미지 저장'; }
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('pickModal').hidden && !$('pickStage').hidden) closePick(); });
 
 if (!ready) { $('setupNote').hidden = false; $('status').hidden = true; }

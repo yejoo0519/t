@@ -475,14 +475,15 @@ function showResult(r, tier) {
     </div>
     <p class="res-name">${esc(r.grade)} · ${esc(r.name)}</p>
     ${r.last && r.code ? codeBox({item_name: r.name, code: r.code}) : ''}
-    ${r.no && itemsOf(prizeIdOf(r)).length ? pickerHTML(r.no, prizeIdOf(r)) : ''}
+    ${r.no && itemsOf(prizeIdOf(r)).length ? randHTML(r.no).replace('class="rpick"', `class="rpick" data-pid="${esc(prizeIdOf(r))}"`) : ''}
   </div>`;
   $('result').hidden = false;
+  rollItem($('result').querySelector('.rpick'));
   phase = 'open';
   if (cur < lastResults.length - 1) {
-    if (autoAll && !$('result').querySelector('.ipick, .codebox')) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
+    if (autoAll && !$('result').querySelector('.ipick, .codebox, .rpick')) setTimeout(() => { if (phase === 'open') { cur++; showTicket(); } }, 1600);
     else { $('nextBtn').hidden = false; $('nextBtn').textContent = `다음 쿠폰 (${cur + 2}/${lastResults.length})`; }
-  } else if (!$('result').querySelector('.ipick, .codebox')) setTimeout(showSummary, autoAll ? 1600 : 1800);
+  } else if (!$('result').querySelector('.ipick, .codebox, .rpick')) setTimeout(showSummary, autoAll ? 1600 : 1800);
   else { $('nextBtn').hidden = false; $('nextBtn').textContent = '결과 모아보기'; }
 }
 $('tktWrap').addEventListener('pointerdown', e => {
@@ -512,10 +513,26 @@ $('tktWrap').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key =
 const prizeIdOf = r => r.prize_id || prizes.find(p => p.grade === r.grade && p.name === r.name)?.id;
 const itemsOf = pid => items.filter(i => i.prize_id === pid);
 function codeBox(res) {
-  return `<div class="codebox"><small>받은 아이템</small><b class="cb-item">${esc(res.item_name)}</b>
+  return `<div class="codebox"><small>받은 상품</small>${res.image ? `<img class="cb-img" src="${esc(res.image)}" alt="">` : ''}<b class="cb-item">${esc(res.item_name)}</b>
     ${res.code ? `<div class="cb-code"><code>${esc(res.code)}</code><button class="cb-copy" data-code="${esc(res.code)}">복사</button></div><p class="cb-warn">⚠️ 코드는 받은 즉시 바로 사용해 주세요!</p><p class="cb-note">이 코드는 나만 볼 수 있어요. 내 당첨에서 다시 볼 수 있어요.</p>`
       : `<p class="cb-note">코드 없는 아이템이에요. 관리자가 지급해줄 거예요.</p>`}</div>`;
 }
+// 랜덤 상품: 자리만 만들고 서버에서 뽑아서 채움
+const randHTML = slotNo => `<div class="rpick" data-slot="${slotNo}"><p class="rpick-t">어떤 상품이 나올까…</p><div class="rpick-roll"></div><p class="ki-err rpick-err"></p></div>`;
+async function rollItem(box) {
+  if (!box || box.dataset.busy) return;
+  box.dataset.busy = 1;
+  const pid = box.dataset.pid, list = itemsOf(pid), roll = box.querySelector('.rpick-roll');
+  let i = 0; const spin = setInterval(() => { const it = list[i++ % Math.max(list.length, 1)]; if (it) roll.innerHTML = `${it.image ? `<img src="${esc(it.image)}" alt="">` : ''}<span>${esc(it.name)}</span>`; }, 90);
+  const [res] = await Promise.all([sb.rpc('random_item', {p_member: me().id, p_pin: $('pin').value, p_slot: +box.dataset.slot}), new Promise(r => setTimeout(r, 1400))]);
+  clearInterval(spin);
+  if (res.error) { delete box.dataset.busy; roll.innerHTML = `<button class="ki-go rpick-retry">다시 시도</button>`; box.querySelector('.rpick-err').textContent = errMsg(res.error); return; }
+  sfx('high');
+  box.outerHTML = codeBox(res.data);
+  const g = await sb.rpc('item_stock'); if (!g.error) stock = new Map(g.data.map(x => [x.item_id, x.remaining]));
+  if (phase === 'open' && cur >= lastResults.length - 1 && !$('result').querySelector('.rpick')) { $('nextBtn').hidden = false; $('nextBtn').textContent = '결과 모아보기'; }
+}
+
 function pickerHTML(slotNo, pid) {
   const list = itemsOf(pid);
   return `<div class="ipick" data-slot="${slotNo}">
@@ -553,6 +570,7 @@ document.addEventListener('click', async e => {
     return;
   }
   const go = e.target.closest('.ipick-go'); if (go) { chooseItem(go.closest('.ipick')); return; }
+  const rg = e.target.closest('.rpick-go, .rpick-retry'); if (rg) { rollItem(rg.closest('.rpick')); return; }
   const cp = e.target.closest('.cb-copy');
   if (cp) { try { await navigator.clipboard.writeText(cp.dataset.code); cp.textContent = '복사됨!'; } catch (er) { cp.textContent = '길게 눌러 복사'; } setTimeout(() => cp.textContent = '복사', 1600); }
 });
@@ -565,7 +583,7 @@ async function openWins() {
   const cur = data.filter(w => !w.past), past = data.filter(w => w.past);
   $('winsList').innerHTML = (cur.length ? cur.map(w => `<div class="win" style="--c:${esc(w.color)}">
       <div class="win-h">${w.image ? `<img src="${esc(w.image)}" alt="">` : ''}<span class="gold-g"><b>${esc(letter(w.grade))}</b><small>상</small></span><span class="win-nm">${esc(w.name)}</span><span class="win-no">${w.last ? 'LAST ONE' : w.no + '번'}</span></div>
-      ${w.item_name ? codeBox(w) : w.prize_id && itemsOf(w.prize_id).length ? pickerHTML(w.no, w.prize_id) : ''}
+      ${w.item_name ? codeBox(w) : w.prize_id && itemsOf(w.prize_id).length ? `<div class="rpick idle" data-slot="${w.no}" data-pid="${esc(w.prize_id)}"><div class="rpick-roll"><button class="ki-go rpick-go">🎲 랜덤으로 상품 받기</button></div><p class="ki-err rpick-err"></p></div>` : ''}
     </div>`).join('') : '<p class="wins-empty">이번 판에서 뽑은 쿠폰이 아직 없어요.</p>')
     + (past.length ? `<h3 class="wins-past">지난 판에서 받은 코드</h3>` + past.map(w => `<div class="win past">${codeBox(w)}</div>`).join('') : '');
 }

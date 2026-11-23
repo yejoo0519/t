@@ -321,6 +321,42 @@ end $$;
 revoke all on function public.choose_item(uuid, text, int, uuid) from public;
 grant execute on function public.choose_item(uuid, text, int, uuid) to anon, authenticated;
 
+-- 같은 등급 안에서 상품 랜덤 지급 (남은 코드 수만큼 가중치, 코드 없는 상품은 1)
+create or replace function public.random_item(p_member uuid, p_pin text, p_slot int)
+returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  sl public.slots;
+  v_item uuid;
+  v_code public.item_codes;
+begin
+  perform public.check_pin(p_member, p_pin);
+  select * into sl from public.slots where no = p_slot for update;
+  if not found or not sl.opened or sl.opened_by is distinct from p_member then
+    raise exception '내가 뽑은 쿠폰이 아니에요';
+  end if;
+  if sl.item_id is not null then
+    select * into v_code from public.item_codes where claimed_slot_uid = sl.uid limit 1;
+    return jsonb_build_object('item_id', sl.item_id, 'item_name', sl.item_name,
+      'image', (select image from public.prize_items where id = sl.item_id), 'code', v_code.code, 'already', true);
+  end if;
+
+  -- 후보: 남은 코드가 있는 상품(코드 1개 = 1표), 코드 자체가 없는 상품(1표)
+  select item_id into v_item from (
+    select c.item_id from public.item_codes c join public.prize_items i on i.id = c.item_id
+     where i.prize_id = sl.prize_id and c.claimed_slot_uid is null
+    union all
+    select i.id from public.prize_items i
+     where i.prize_id = sl.prize_id and not exists (select 1 from public.item_codes c where c.item_id = i.id)
+  ) pool order by random() limit 1;
+  if v_item is null then raise exception '이 등급에 남은 상품이 없어요. 운영진에게 알려주세요'; end if;
+
+  return public.choose_item(p_member, p_pin, p_slot, v_item)
+      || jsonb_build_object('image', (select image from public.prize_items where id = v_item));
+end $$;
+revoke all on function public.random_item(uuid, text, int) from public;
+grant execute on function public.random_item(uuid, text, int) to anon, authenticated;
+
 -- 내 당첨 · 코드 보기
 create or replace function public.my_wins(p_member uuid, p_pin text)
 returns jsonb

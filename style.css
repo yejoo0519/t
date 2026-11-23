@@ -689,3 +689,11 @@ button.cp:hover{transform:translateY(-2px)}
 .vres-get.short b{font-size:34px}
 .vres-bar{padding:10px 14px 14px;background:#1b1416}
 .vres-bar .gpbar{background:#3a2a2d;box-shadow:none}.vres-bar .gpbar span{color:#fff}
+.rpick{margin:0 18px 16px;padding:16px;border-radius:16px;text-align:center;background:rgba(255,255,255,.07);border:1.5px solid rgba(123,224,255,.45)}
+.win .rpick{margin:0}
+.rpick-t{margin:0 0 10px;font-weight:800;color:#fff}
+.rpick-roll{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:104px}
+.rpick-roll img{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(123,224,255,.7))}
+.rpick-roll span{font-family:"Black Han Sans";font-size:22px;color:#fff}
+.rpick.idle{border-style:dashed}
+.cb-img{display:block;width:84px;height:84px;margin:4px auto 0;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(0,0,0,.25))}

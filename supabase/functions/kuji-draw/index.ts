@@ -81,6 +81,18 @@ async function readGp(img: Uint8Array, mime: string, name: string): Promise<Read
   return parseRead(text) ?? { error: "스샷 인식 결과를 이해하지 못했어요. 다시 시도해 주세요" };
 }
 
+// 서버 전용 키 (예전 이름 / 새 이름 둘 다 지원)
+function serverKey(): string {
+  const direct = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SECRET_KEY");
+  if (direct) return direct;
+  try {
+    const all = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    const v = all.default ?? Object.values(all)[0];
+    if (typeof v === "string") return v;
+  } catch { /* ignore */ }
+  throw new Error("서버 키를 찾을 수 없어요");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return fail("POST만 돼요");
@@ -90,7 +102,7 @@ Deno.serve(async (req) => {
   const { member, pin, photo } = body;
   if (!member || !photo || typeof pin !== "string" || !/^\d{4}$/.test(pin)) return fail("닉네임·비밀번호·사진을 확인해 주세요");
 
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, serverKey(), {
     auth: { persistSession: false },
   });
   const drop = () => sb.storage.from("proofs").remove([photo]);

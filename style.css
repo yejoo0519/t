@@ -697,3 +697,14 @@ button.cp:hover{transform:translateY(-2px)}
 .rpick-roll span{font-family:"Black Han Sans";font-size:22px;color:#fff}
 .rpick.idle{border-style:dashed}
 .cb-img{display:block;width:84px;height:84px;margin:4px auto 0;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(0,0,0,.25))}
+/* 확률 표시 */
+.gprob{position:absolute;z-index:3;left:6px;top:calc(100% - 4px);white-space:nowrap;padding:3px 10px;border-radius:999px;background:#1b1416;color:#fff;font-size:12px;font-weight:700;box-shadow:0 0 0 2px #fff}
+.gprob b{font-family:"Black Han Sans";font-weight:400;font-size:15px;color:#ffe14d;margin-left:2px}
+.pc-art .gprob{top:auto;bottom:6px;left:50%;transform:translateX(-50%)}
+.pr-l{position:relative}.pr-l .gprob{position:static;align-self:flex-start;margin-top:12px}
+.ilist li small.ip{background:#1b1416;color:#ffe14d;font-weight:800}
+.ilist li.soldout small.ip{background:#ddd;color:#777}
+.pc.hero .pc-art .gprob{font-size:14px}.pc.hero .pc-art .gprob b{font-size:20px}
+.pr .ilist{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.pr .ilist li span{white-space:normal;overflow-wrap:anywhere;line-height:1.15}
+@media(max-width:640px){.pr .ilist{grid-template-columns:repeat(2,minmax(0,1fr))}.pr .ilist li{font-size:12px;gap:5px}.pr .ilist li img{width:24px;height:24px}}

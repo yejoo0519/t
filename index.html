@@ -148,10 +148,18 @@ function renderBoard() {
   };
   const count = p => `<div class="seal ${p.remaining ? '' : 'zero'}" aria-label="남은 ${p.remaining}장 / ${p.total}장"><div><small>남은</small><b>${p.remaining}</b><em>/ ${p.total}장</em></div></div>`;
   const done = p => p.remaining ? '' : '<span class="stamp">종료</span>';
-  const logo = p => `<span class="glogo"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>`;
+  const logo = p => `<span class="glogo"><b>${esc(letter(p.grade))}</b>${/상$/.test(p.grade) ? '<i>상</i>' : ''}</span>${gbadge(p)}`;
   const its = p => items.filter(i => i.prize_id === p.id);
-  const ilist = p => its(p).length ? `<ul class="ilist">${its(p).map(i => { const l = stock.get(i.id);
-      return `<li class="${l === 0 ? 'soldout' : ''}">${i.image ? `<img src="${esc(i.image)}" alt="">` : ''}<span>${esc(i.name)}</span>${l == null ? '' : l === 0 ? '<small>품절</small>' : `<small>${l}</small>`}</li>`; }).join('')}</ul>` : '';
+  // 확률: 등급 = 남은 장수 / 전체 남은 장수, 상품 = 등급 확률 × (그 상품 남은 코드 / 등급 안 남은 코드 합)
+  const totalLeft = Math.max(1, left());
+  const gradeP = p => size() ? p.remaining / totalLeft : 0;
+  const w = i => { const l = stock.get(i.id); return l == null ? 1 : l; };
+  const pct = x => x <= 0 ? '0%' : x < .01 ? (x * 100).toFixed(2) + '%' : (x * 100).toFixed(1).replace(/\.0$/, '') + '%';
+  const ilist = p => { const list = its(p); if (!list.length) return '';
+    const sum = list.reduce((a, i) => a + w(i), 0) || 1, gp = gradeP(p);
+    return `<ul class="ilist">${list.map(i => { const l = stock.get(i.id), out = l === 0;
+      return `<li class="${out ? 'soldout' : ''}" title="${l == null ? '' : `남은 ${l}개`}">${i.image ? `<img src="${esc(i.image)}" alt="">` : ''}<span>${esc(i.name)}</span><small class="ip">${out ? '품절' : pct(gp * w(i) / sum)}</small></li>`; }).join('')}</ul>`; };
+  const gbadge = p => size() ? `<span class="gprob">확률 <b>${pct(gradeP(p))}</b></span>` : '';
   const art = p => {
     const imgs = its(p).filter(i => i.image).slice(0, 4);
     if (imgs.length > 1) return `<div class="multi n${imgs.length}">${imgs.map(i => `<img src="${esc(i.image)}" alt="">`).join('')}</div>`;

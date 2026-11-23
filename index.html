@@ -209,7 +209,7 @@ function renderMine() {
     $('pickWhy').textContent = why; $('pickWhy').hidden = !why;
   } else { $('myPts').innerHTML = ''; $('creditBox').hidden = true; $('myWinsBtn').hidden = true; }
   if (size() && !left()) msg = '쿠지가 전부 소진됐어요!';
-  if (!busy) $('regErr').textContent = msg;
+  if (!busy && msg) $('regErr').textContent = msg;
   $('regBtn').disabled = busy;
 }
 
@@ -267,17 +267,22 @@ async function doRegister() {
     if (up.error) throw new Error('사진 업로드 실패: ' + errMsg(up.error));
     $('regBtn').textContent = '스샷에서 GP 읽는 중…';
     const {data, error} = await sb.functions.invoke('kuji-draw', {body: {member: m.id, pin, photo: path}});
-    if (error) throw new Error('서버 함수 호출 실패: ' + errMsg(error));
+    if (error) {
+      let detail = '';
+      try { detail = await error.context?.text?.(); } catch (e2) {}
+      throw new Error('서버 함수 호출 실패: ' + errMsg(error) + (detail ? ` (${String(detail).slice(0, 160)})` : ''));
+    }
     if (!data.ok) throw new Error((data.gp != null ? `읽은 GP ${data.gp.toLocaleString()} — ` : '') + data.error);
     try { localStorage.setItem('kuji-who', m.id); } catch (e) {}
-    const pct = Math.min(100, (data.cost - data.need) / data.cost * 100);
+    const cost = data.cost || S?.cost || 1, need = data.need ?? (cost - (data.carry ?? 0)), gained = data.gained ?? 0, carry = data.carry ?? 0;
+    const pct = Math.min(100, (cost - need) / cost * 100);
     $('vres').innerHTML = `<div class="vres-top"><span>인식된 GP</span><b>${data.gp.toLocaleString()}</b></div>
-      <dl><div><dt>기준 GP</dt><dd>${(data.gp - data.gained).toLocaleString()}</dd></div>
-          <div><dt>늘어난 GP</dt><dd>+${data.gained.toLocaleString()}</dd></div>
-          <div><dt>다음으로 이월</dt><dd>${data.carry.toLocaleString()} GP</dd></div></dl>
+      <dl><div><dt>기준 GP</dt><dd>${(data.gp - gained).toLocaleString()}</dd></div>
+          <div><dt>늘어난 GP</dt><dd>+${gained.toLocaleString()}</dd></div>
+          <div><dt>다음으로 이월</dt><dd>${carry.toLocaleString()} GP</dd></div></dl>
       ${data.granted ? `<div class="vres-get"><span>받은 뽑기권</span><b>${data.granted}</b><span>장</span></div>`
-        : `<div class="vres-get short"><span>아직 미달이에요</span><b>${data.need.toLocaleString()}</b><span>GP 더 모으면 1장</span></div>`}
-      <div class="vres-bar"><div class="gpbar"><i style="width:${pct}%"></i><span>다음 뽑기권까지 <b>${(data.cost - data.need).toLocaleString()}</b> / ${data.cost.toLocaleString()} GP</span></div></div>`;
+        : `<div class="vres-get short"><span>아직 미달이에요</span><b>${need.toLocaleString()}</b><span>GP 더 모으면 1장</span></div>`}
+      <div class="vres-bar"><div class="gpbar"><i style="width:${pct}%"></i><span>다음 뽑기권까지 <b>${(cost - need).toLocaleString()}</b> / ${cost.toLocaleString()} GP</span></div></div>`;
     $('vres').hidden = false;
     photoFile = null; $('photo').value = ''; $('dropT').textContent = '탭해서 사진 올리기'; $('dropL').querySelector('img')?.remove();
     await load();

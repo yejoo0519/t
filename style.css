@@ -713,3 +713,21 @@ button.cp:hover{transform:translateY(-2px)}
 .ilist li small,.stk b{color:#1b1416;background:#fff1dc}
 .ilist li small.ip{background:#1b1416;color:#ffe14d}
 .iopt-left{color:#6f6266}
+/* 모바일: 상위상 카드를 가로형으로 (이미지 왼쪽, 상품 칩 가로 나열) */
+@media(max-width:640px){
+  .pop-top{grid-template-columns:minmax(0,1fr)!important;gap:14px}
+  .pc:not(.hero){display:grid;grid-template-columns:118px minmax(0,1fr);grid-template-areas:"art name" "art list" "paste paste";column-gap:10px;align-items:start;
+    padding-bottom:12px;border-bottom:2px dashed rgba(255,255,255,.35)}
+  .pc:not(.hero) .pc-art{grid-area:art;height:128px}
+  .pc:not(.hero) .pc-art img{width:76px;height:76px}
+  .pc:not(.hero) .multi{width:110px;height:96px}.pc:not(.hero) .multi img{max-width:52px;max-height:46px}
+  .pc:not(.hero) .glogo b{font-size:40px;-webkit-text-stroke:6px #fff}.pc:not(.hero) .glogo i{font-size:18px;-webkit-text-stroke:4px #fff}
+  .pc:not(.hero) .seal{width:54px;height:54px;right:-6px;top:-2px}.pc:not(.hero) .seal b{font-size:20px}.pc:not(.hero) .seal small,.pc:not(.hero) .seal em{font-size:8px}
+  .pc:not(.hero) .gprob{font-size:11px;padding:2px 8px;bottom:0}.pc:not(.hero) .gprob b{font-size:13px}
+  .pc:not(.hero) .pname{grid-area:name;text-align:left;margin:6px 0 0;font-size:19px}
+  .pc:not(.hero) .ilist{grid-area:list;justify-content:flex-start;margin:6px 0 0}
+  .pc:not(.hero) .paste{grid-area:paste;margin:10px 0 0}
+  .pc .ilist li span{max-width:none;overflow:visible}
+  .pc .stamp{top:40%;left:60px}
+}
+@media(max-width:640px){.pc:not(.hero) .ilist{gap:4px}.pc:not(.hero) .ilist li{font-size:12px;padding:3px 7px 3px 3px;gap:4px}.pc:not(.hero) .ilist li img{width:22px;height:22px}}

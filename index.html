@@ -547,7 +547,21 @@ async function rollItem(box) {
   box.dataset.busy = 1;
   const pid = box.dataset.pid, list = itemsOf(pid), roll = box.querySelector('.rpick-roll');
   let i = 0; const spin = setInterval(() => { const it = list[i++ % Math.max(list.length, 1)]; if (it) roll.innerHTML = `${it.image ? `<img src="${esc(it.image)}" alt="">` : ''}<span>${esc(it.name)}</span>`; }, 90);
-  const [res] = await Promise.all([sb.rpc('random_item', {p_member: me().id, p_pin: $('pin').value, p_slot: +box.dataset.slot}), new Promise(r => setTimeout(r, 1400))]);
+  const [res0] = await Promise.all([sb.rpc('random_item', {p_member: me().id, p_pin: $('pin').value, p_slot: +box.dataset.slot}), new Promise(r => setTimeout(r, 1400))]);
+  let res = res0;
+  // DB에 random_item 함수가 아직 없으면: 남은 수량 비율로 골라서 choose_item 으로 지급
+  if (res.error && /random_item|schema cache/i.test(errMsg(res.error))) {
+    const g = await sb.rpc('item_stock'); if (!g.error) stock = new Map(g.data.map(x => [x.item_id, x.remaining]));
+    const cands = list.map(i => ({i, w: stock.get(i.id) == null ? 1 : stock.get(i.id)})).filter(x => x.w > 0);
+    const tot = cands.reduce((a, x) => a + x.w, 0);
+    if (!tot) res = {error: {message: '이 등급에 남은 상품이 없어요. 운영진에게 알려주세요'}};
+    else {
+      let r = Math.random() * tot, pick = cands[0].i;
+      for (const x of cands) { r -= x.w; if (r < 0) { pick = x.i; break; } }
+      res = await sb.rpc('choose_item', {p_member: me().id, p_pin: $('pin').value, p_slot: +box.dataset.slot, p_item: pick.id});
+      if (!res.error) res.data = {...res.data, image: res.data.image || pick.image};
+    }
+  }
   clearInterval(spin);
   if (res.error) { delete box.dataset.busy; roll.innerHTML = `<button class="ki-go rpick-retry">다시 시도</button>`; box.querySelector('.rpick-err').textContent = errMsg(res.error); return; }
   sfx('high');

@@ -6,7 +6,7 @@
 <title>길드 쿠지 뽑기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1795493461">
+<link rel="stylesheet" href="style.css?v=1795493801">
 </head>
 <body>
 <header class="band"><div class="wrap">
@@ -116,8 +116,8 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=1795493461"></script>
-<script src="common.js?v=1795493461"></script>
+<script src="config.js?v=1795493801"></script>
+<script src="common.js?v=1795493801"></script>
 <script>
 {
 const {sb, ready, $, esc, art, photoUrl, toast, errMsg, fmtTime, loadDragons, findDragon} = K;
@@ -197,12 +197,13 @@ function renderWho() {
 }
 
 /* ---------- 이벤트 시작 시각 ---------- */
-const notOpen = () => S?.open_at && Date.now() < Date.parse(S.open_at);
-const openText = () => { const d = new Date(S.open_at); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const openAt = () => S?.open_at || KUJI_CONFIG.openAt || null;
+const notOpen = () => !!openAt() && Date.now() < Date.parse(openAt());
+const openText = () => { const d = new Date(openAt()); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 function renderOpen() {
   const bar = $('openBar');
   if (!notOpen()) { if (!bar.hidden) { bar.hidden = true; load(); } return; }
-  const ms = Date.parse(S.open_at) - Date.now(), hh = Math.floor(ms / 3600000), mm = Math.floor(ms % 3600000 / 60000), ss = Math.floor(ms % 60000 / 1000);
+  const ms = Date.parse(openAt()) - Date.now(), hh = Math.floor(ms / 3600000), mm = Math.floor(ms % 3600000 / 60000), ss = Math.floor(ms % 60000 / 1000);
   bar.innerHTML = `<b>⏰ ${openText()} 오픈!</b><span>시작까지 <em>${hh ? hh + '시간 ' : ''}${mm}분 ${String(ss).padStart(2, '0')}초</em> · 오픈 후에 길포 스샷으로 인증해줘</span>`;
   bar.hidden = false;
 }

@@ -93,6 +93,9 @@ create policy "admin" on public.member_pins for all using (public.is_admin()) wi
 create policy "admin" on public.draws       for all using (public.is_admin()) with check (public.is_admin());
 -- admins 테이블은 정책 없음 = SQL Editor 에서만 수정 가능
 
+-- 이벤트 시작 시각 (비우면 바로 참여 가능)
+alter table public.settings add column if not exists open_at timestamptz;
+
 -- ---------- 쿠지판 칸 (어느 칸에 뭐가 있는지는 뜯기 전까지 비공개) ----------
 alter table public.settings add column if not exists board_size int not null default 0;
 
@@ -168,6 +171,10 @@ begin
   end if;
 
   select * into s from public.settings where id = 1 for update;
+  -- 이벤트 시작 전이면 막기
+  if s.open_at is not null and now() < s.open_at then
+    raise exception '이벤트는 % 에 시작해요', to_char(s.open_at at time zone 'Asia/Seoul', 'MM/DD HH24:MI');
+  end if;
   select * into m from public.members where id = p_member for update;
   if not found then raise exception '길드원을 찾을 수 없어요'; end if;
 
@@ -232,6 +239,10 @@ begin
   end if;
 
   select * into s from public.settings where id = 1 for update;
+  -- 이벤트 시작 전이면 막기
+  if s.open_at is not null and now() < s.open_at then
+    raise exception '이벤트는 % 에 시작해요', to_char(s.open_at at time zone 'Asia/Seoul', 'MM/DD HH24:MI');
+  end if;
   select * into m from public.members where id = p_member for update;
   if not found then raise exception '길드원을 찾을 수 없어요'; end if;
 

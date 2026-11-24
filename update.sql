@@ -16,6 +16,9 @@ update public.members set last_gp = base_gp where last_gp < base_gp;
 alter table public.draws add column if not exists reported_gp int;
 alter table public.prizes add column if not exists image text;
 
+-- 이벤트 시작 시각 (비우면 바로 참여 가능)
+alter table public.settings add column if not exists open_at timestamptz;
+
 -- ---------- 쿠지판 칸 (어느 칸에 뭐가 있는지는 뜯기 전까지 비공개) ----------
 alter table public.settings add column if not exists board_size int not null default 0;
 
@@ -91,6 +94,10 @@ begin
   end if;
 
   select * into s from public.settings where id = 1 for update;
+  -- 이벤트 시작 전이면 막기
+  if s.open_at is not null and now() < s.open_at then
+    raise exception '이벤트는 % 에 시작해요', to_char(s.open_at at time zone 'Asia/Seoul', 'MM/DD HH24:MI');
+  end if;
   select * into m from public.members where id = p_member for update;
   if not found then raise exception '길드원을 찾을 수 없어요'; end if;
 
@@ -155,6 +162,10 @@ begin
   end if;
 
   select * into s from public.settings where id = 1 for update;
+  -- 이벤트 시작 전이면 막기
+  if s.open_at is not null and now() < s.open_at then
+    raise exception '이벤트는 % 에 시작해요', to_char(s.open_at at time zone 'Asia/Seoul', 'MM/DD HH24:MI');
+  end if;
   select * into m from public.members where id = p_member for update;
   if not found then raise exception '길드원을 찾을 수 없어요'; end if;
 

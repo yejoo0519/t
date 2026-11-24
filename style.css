@@ -741,3 +741,6 @@ button.cp:hover{transform:translateY(-2px)}
   .pr{padding:12px 0}
   .pr-name .pname{font-size:17px}
 }
+.openbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 14px;margin:0 0 18px;padding:14px 18px;border-radius:16px;background:#1b1416;color:#fff;text-align:center;box-shadow:0 0 0 3px #f6b81a}
+.openbar b{font-family:"Black Han Sans";font-weight:400;font-size:24px;color:#f6b81a}
+.openbar em{font-style:normal;font-weight:800;color:#ffe14d;font-variant-numeric:tabular-nums}

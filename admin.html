@@ -6,7 +6,7 @@
 <title>쿠지 관리자</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1795492306">
+<link rel="stylesheet" href="style.css?v=1795493461">
 </head>
 <body>
 <header class="band"><div class="wrap">
@@ -32,6 +32,7 @@
       <div class="card">
         <h3>기본 설정</h3>
         <label for="aTitle">쿠지 이름</label><input type="text" id="aTitle">
+        <label for="aOpen" style="margin-top:12px">이벤트 시작 시각 (비우면 바로 참여 가능)</label><input type="datetime-local" id="aOpen">
         <label for="aCost" style="margin-top:12px">1회당 필요 GP (늘어난 GP 기준)</label><input type="number" id="aCost" min="1">
         <label for="aLast" style="margin-top:12px">라스트원 상품 (비우면 없음 · 드래곤 이름이면 이미지 자동)</label><input type="text" id="aLast" list="dragonList"><div class="pv" id="lastPv"></div>
         <label for="aLastCode" style="margin-top:12px">라스트원 코드 (당첨자만 볼 수 있음 · 비우면 코드 없음)</label><input type="text" id="aLastCode" autocomplete="off" placeholder="예: LAST-ABCD-1234">
@@ -88,8 +89,8 @@
 <datalist id="dragonList"></datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=1795492306"></script>
-<script src="common.js?v=1795492306"></script>
+<script src="config.js?v=1795493461"></script>
+<script src="common.js?v=1795493461"></script>
 <script>
 {
 const {sb, ready, $, esc, COLORS, art, toast, errMsg, loadDragons, findDragon} = K;
@@ -114,6 +115,7 @@ async function load() {
   S = a.data; prizes = b.data; members = c.data;
   edit = prizes.map(p => ({...p}));
   $('aTitle').value = S.title; $('aCost').value = S.cost; $('aLast').value = S.last_one_name;
+  if (S.open_at) { const d = new Date(S.open_at), p = n => String(n).padStart(2, '0'); $('aOpen').value = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; } else $('aOpen').value = '';
   $('lastPv').innerHTML = pv(S.last_one_name);
   const sec = await sb.from('kuji_secrets').select('value').eq('key', 'last_one_code').maybeSingle();
   $('aLastCode').value = sec.data?.value || '';
@@ -242,7 +244,7 @@ $('saveCfg').addEventListener('click', async () => {
   const lc = $('aLastCode').value.trim();
   const sr = lc ? await sb.from('kuji_secrets').upsert({key: 'last_one_code', value: lc}) : await sb.from('kuji_secrets').delete().eq('key', 'last_one_code');
   if (sr.error) { toast('라스트원 코드 저장 실패: ' + errMsg(sr.error)); return; }
-  if (await run(sb.from('settings').update({title: $('aTitle').value.trim() || '길드 쿠지', cost, last_one_name: $('aLast').value.trim()}).eq('id', 1), '설정 저장')) load();
+  if (await run(sb.from('settings').update({open_at: $('aOpen').value ? new Date($('aOpen').value).toISOString() : null, title: $('aTitle').value.trim() || '길드 쿠지', cost, last_one_name: $('aLast').value.trim()}).eq('id', 1), '설정 저장')) load();
 });
 
 $('importBtn').addEventListener('click', async () => {

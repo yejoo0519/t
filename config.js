@@ -4,6 +4,6 @@
 window.KUJI_CONFIG = {
   url: "https://yevbwmznscqqtcdpqaol.supabase.co",
   anonKey: "sb_publishable_tyVCPEuerIPDBFFv2WAecA_D0pIsDgf",
-  openAt: "2026-11-25T00:00:00+09:00",   // 이벤트 시작 시각 (DB 설정이 있으면 그게 우선)
+  openAt: "2026-11-25T00:10:00+09:00",   // 이벤트 시작 시각 (DB 설정이 있으면 그게 우선)
   fn: "clever-service"   // Edge Function 주소(slug). 대시보드에서 이름만 kuji-draw로 바꿔서 주소는 이대로
 };

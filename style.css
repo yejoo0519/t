@@ -731,3 +731,13 @@ button.cp:hover{transform:translateY(-2px)}
   .pc .stamp{top:40%;left:60px}
 }
 @media(max-width:640px){.pc:not(.hero) .ilist{gap:4px}.pc:not(.hero) .ilist li{font-size:12px;padding:3px 7px 3px 3px;gap:4px}.pc:not(.hero) .ilist li img{width:22px;height:22px}}
+/* 모바일 하위상: 칩을 작게 줄여서 한 줄에 여러 개 */
+@media(max-width:640px){
+  .pr .ilist{display:flex!important;flex-wrap:wrap;gap:4px;grid-template-columns:none}
+  .pr .ilist li{flex:0 0 auto;font-size:11px;padding:2px 6px 2px 2px;gap:3px;border-radius:999px}
+  .pr .ilist li img{width:20px;height:20px;border-radius:50%}
+  .pr .ilist li span{white-space:nowrap;line-height:1.2}
+  .pr .ilist li small.ip{font-size:10px;padding:1px 5px}
+  .pr{padding:12px 0}
+  .pr-name .pname{font-size:17px}
+}

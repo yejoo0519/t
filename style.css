@@ -708,3 +708,8 @@ button.cp:hover{transform:translateY(-2px)}
 .pr .ilist{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
 .pr .ilist li span{white-space:normal;overflow-wrap:anywhere;line-height:1.15}
 @media(max-width:640px){.pr .ilist{grid-template-columns:repeat(2,minmax(0,1fr))}.pr .ilist li{font-size:12px;gap:5px}.pr .ilist li img{width:24px;height:24px}}
+/* 다크모드에서도 흰 칩/카드 위 글씨는 항상 진하게 */
+.ilist li,.ilist li span,.stk,.stk em,.iopt,.iopt-nm,.summary,.summary h3,.sum p,.tk .b small,.cp-nm,.win .codebox,.pop-left{color:#1b1416}
+.ilist li small,.stk b{color:#1b1416;background:#fff1dc}
+.ilist li small.ip{background:#1b1416;color:#ffe14d}
+.iopt-left{color:#6f6266}
